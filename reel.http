@@ -1,0 +1,71 @@
+###
+run ./login.http
+
+### CREATE_REEL_WIDGET
+
+POST {{WIDGETS_API_ENDPOINT}}/widgets/commands/add HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "type": "reel",
+  "sortOrder": 0,
+  "name": "Рулетка"
+}
+
+### MAKE_PAYMENT
+
+PUT {{PAYMENT_API_ENDPOINT}}/payments/commands/create HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "{{$uuid}}",
+  "recipientId": "testuser",
+  "nickname": "stCarolas",
+  "gatewayCredId": "1",
+  "message": "autotest reel {{$timestamp}}",
+  "amount": {
+    "major": 100,
+    "minor": 0,
+    "currency": "RUB"
+  },
+  "attachments": [],
+  "goal": null,
+  "auction": null,
+  "actions": []
+}
+
+> {%
+  async function wait(ms) {
+    return new Promise(resolve => {
+      setTimeout(resolve, ms);
+    });
+  }
+  wait(2000);
+%}
+
+### CHECK_HISTORY_ITEM
+
+POST {{HISTORY_API_ENDPOINT}}/history/get?size=1 HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "recipientId": "testuser",
+  "systems": []
+}
+
+> {%
+  let json = response.body.content;
+
+  client.test("Info about reel added to history", function() {
+    client.assert(json.length == 1, "Has History Item");
+    client.assert(json[0].reelResults !== null, "Info about requested reels is Ready");
+    client.assert(
+      json[0].reelResults.length == 1,
+      "Info about requested reels is Ready")
+  });
+%}

@@ -1,0 +1,33 @@
+###
+run ./login.http
+
+### SET_FAKE_GATEWAY
+
+POST {{GATEWAYS_API_ENDPOINT}}/payments/commands/setgateway HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "1",
+  "gatewayId": "1",
+  "token": "",
+  "gateway": "fake",
+  "secret": "",
+  "type": "fiat",
+  "enabled": true
+}
+
+### CHECK_FAKE_GATEWAY
+
+GET {{GATEWAYS_API_ENDPOINT}}/payments/gateways?recipientId=testuser HTTP/1.1
+Accept: application/json
+
+> {%
+  client.test("Correct gateways settings", function() {
+     const gateways = response.body
+      .filter(gateway => gateway.enabled)
+      .filter(gateway => gateway.gateway === "fake");
+    client.assert(gateways.length === 1, "Default gateway is fake");
+  });
+%}

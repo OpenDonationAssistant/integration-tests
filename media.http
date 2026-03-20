@@ -1,0 +1,144 @@
+###
+run ./login.http
+
+### CREATE_MEDIA_WIDGET
+
+POST {{WIDGET_API_ENDPOINT}}/widgets/commands/add HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "type": "media",
+  "sortOrder": 0,
+  "name": "autotest {{$timestamp}}"
+}
+
+> {%
+client.global.set("widgetId", response.body.id);
+%}
+
+### CHECK_MEDIA_SECTION_ON_PAYMENTPAGE
+
+GET {{CONFIG_API_ENDPOINT}}/config/paymentpage?ownerId=testuser HTTP/1.1
+Accept: application/json
+
+> {%
+  client.test("Has media settings on payment page", function() {
+    client.assert(response.body.value["media.requests.cost"] === 100);
+    client.assert(response.body.value["media.requests.disabled.permanently"] === false);
+    client.assert(response.body.value["media.requests.amount"] === 12);
+    client.assert(response.body.value["media.requests.enabled"] === true);
+  });
+%}
+
+### PREPARE_VIDEO
+
+PUT {{MEDIA_API_ENDPOINT}}/media/video HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "url": "https://vkvideo.ru/video-165282829_456239200",
+  "recipientId": "testuser"
+}
+
+> {%
+client.global.set("mediaId", response.body.id)
+%}
+
+### MAKE_PAYMENT
+
+PUT {{PAYMENT_API_ENDPOINT}}/payments/commands/create HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "{{$uuid}}",
+  "recipientId": "testuser",
+  "nickname": "stCarolas",
+  "gatewayCredId": "1",
+  "message": "autotest {{$timestamp}}",
+  "amount": {
+    "major": 100,
+    "minor": 0,
+    "currency": "RUB"
+  },
+  "attachments": ["{{mediaId}}"],
+  "goal": null,
+  "auction": null,
+  "actions": []
+}
+
+> {%
+  async function wait(ms) {
+    return new Promise(resolve => {
+      setTimeout(resolve, ms);
+    });
+  }
+  wait(2000);
+%}
+
+> {%
+  const { execSync } = require('child_process');
+  const output = execSync('tail -n 1 /tmp/test', { encoding: 'utf8' });
+  console.log(output);
+%}
+
+### CHECK_READY_MEDIA
+
+GET {{MEDIA_API_ENDPOINT}}/media/video HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+> {%
+  let json = response.body;
+
+  client.test("Payed Media is Ready", function() {
+    client.assert(json.length == 1);
+    client.assert(json[0].provider == "vk");
+    client.assert(json[0].status == "ready");
+    client.assert(json[0].title == "Linux by Rebrai: Linux from scratch — 04");
+  });
+%}
+
+### CHECK_HISTORY_ITEM
+
+POST {{HISTORY_API_ENDPOINT}}/history/get?size=1 HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "systems": []
+}
+
+> {%
+  let json = response.body.content;
+
+  client.test("Payed Media is Ready", function() {
+    client.assert(json.length == 1);
+    client.assert(json[0].attachments.length == 1);
+    client.assert(json[0].attachments[0].title == "Linux by Rebrai: Linux from scratch — 04");
+    client.assert(json[0].attachments[0].thumbnail.length > 0);
+  });
+%}
+
+### MARK_VIDEO_HANDLED
+
+PATCH {{MEDIA_API_ENDPOINT}}/media/video/{{mediaId}} HTTP/1.1
+
+### CHECK_NO_READY_MEDIA
+
+GET {{MEDIA_API_ENDPOINT}}/media/video HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+> {%
+  let json = response.body;
+
+  client.test("All Media is Handled", function() {
+    client.assert(json.length == 0);
+  });
+%}

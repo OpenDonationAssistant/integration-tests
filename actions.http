@@ -1,0 +1,79 @@
+###
+run ./login.http
+
+### CREATE_ACTION
+
+POST {{ACTIONS_API_ENDPOINT}}/actions/commands/add-actions HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "actions": [
+    {
+      "name": "test-action-{{$timestamp}}",
+      "category": "test-category",
+      "game": "test-game",
+      "price": {
+        "minor": 0,
+        "major": 100,
+        "currency": "RUB"
+      },
+      "payload": {
+        "key": "value"
+      },
+      "parameters": [
+        {
+          "name": "param1",
+          "displayName": "Parameter 1",
+          "type": "string"
+        }
+      ]
+    }
+  ]
+}
+
+> {%
+client.global.set("actionId", response.body[0].action.id);
+%}
+
+### GET_ACTION_BY_RECIPIENT
+
+GET {{ACTIONS_API_ENDPOINT}}/actions?recipientId=testuser HTTP/1.1
+Accept: application/json
+
+> {%
+  client.test("Action should be present in list", function() {
+    client.assert(response.body.length > 0, "Actions list should not be empty");
+    const createdAction = response.body.find(a => a.name.includes("test-action-"));
+    client.assert(createdAction !== undefined, "Created action should be found");
+    client.assert(createdAction.category === "test-category");
+    client.assert(createdAction.game === "test-game");
+    client.assert(createdAction.enabled === true);
+    client.assert(createdAction.price.major === 100);
+    client.assert(createdAction.price.currency === "RUB");
+  });
+%}
+
+### DELETE_ACTION
+
+POST {{ACTIONS_API_ENDPOINT}}/actions/commands/deleteActions HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "ids": ["{{actionId}}"]
+}
+
+### VERIFY_ACTION_DELETED
+
+GET {{ACTIONS_API_ENDPOINT}}/actions?recipientId=testuser HTTP/1.1
+Accept: application/json
+
+> {%
+  client.test("Action should be deleted", function() {
+    const deletedAction = response.body.find(a => a.id === client.global.get("actionId"));
+    client.assert(deletedAction === undefined, "Action should be deleted");
+  });
+%}

@@ -1,0 +1,13 @@
+### LOGIN
+
+POST {{TOKEN_API_ENDPOINT}} HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=password&
+username={{login}}&
+password={{password}}&
+scope=offline_access openid audience profile email stomp
+
+> {%
+  client.global.set("token", response.body.access_token); 
+%}
