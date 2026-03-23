@@ -1,7 +1,13 @@
 ### 
-
 run ./login.http
 
+###
+POST http://localhost:5000/subscriptions
+Content-Type: application/json
+
+{
+  "topics": ["commands", "testusergoal"]
+}
 
 ### CREATE_DONATIONGOAL_WIDGET
 
@@ -54,17 +60,17 @@ Content-Type: application/json
         "name": "goal",
         "value": [
           {
-            "accumulatedAmount": {
-              "currency": "RUB",
-              "major": 0
-            },
-            "briefDescription": "testgoal",
-            "default": true,
-            "fullDescription": "",
             "id": "{{goalId}}",
+            "default": true,
+            "briefDescription": "testgoal",
+            "fullDescription": "",
             "requiredAmount": {
               "currency": "RUB",
               "major": 300
+            },
+            "accumulatedAmount": {
+              "currency": "RUB",
+              "major": 0
             }
           }
         ]
@@ -128,9 +134,24 @@ Content-Type: application/json
   wait(2000);
 %}
 
+### CHECK_WIDGET_EVENT_UPDATE
+GET http://localhost:5000/subscriptions/testusergoal/messages
+
+> {%
+  client.test("Check widget event update", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body !== null);
+    client.assert(response.body.messages !== null && response.body.messages.length > 0);
+    const message = response.body.messages.filter((message) => {
+      return message.body.goalId === client.global.get("goalId");
+    }).at(-1);
+    client.assert(message !== null && message !== undefined, "Goal found");
+    client.assert(message.body.accumulatedAmount !== null, "Goal has accumulated amount");
+    client.assert(message.body.accumulatedAmount.major === 100, "Amount is updated");
+  });
+%}
 
 ### CHECK_UPDATED_DONATIONGOAL
-
 GET {{CONFIG_API_ENDPOINT}}/config/paymentpage?ownerId=testuser HTTP/1.1
 Accept: application/json
 

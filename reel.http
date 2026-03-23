@@ -53,7 +53,7 @@ Content-Type: application/json
       setTimeout(resolve, ms);
     });
   }
-  wait(2000);
+  wait(3000);
 %}
 
 ### CHECK_HISTORY_ITEM
