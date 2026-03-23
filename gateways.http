@@ -2,7 +2,6 @@
 run ./login.http
 
 ### SET_FAKE_GATEWAY
-
 POST {{GATEWAYS_API_ENDPOINT}}/payments/commands/setgateway HTTP/1.1
 Accept: application/json
 Authorization: Bearer {{token}}

@@ -1,5 +1,7 @@
-###
+### 
+
 run ./login.http
+
 
 ### CREATE_DONATIONGOAL_WIDGET
 
@@ -9,26 +11,34 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "type": "donationgoal",
+  "name": "autotest {{$timestamp}}",
   "sortOrder": 0,
-  "name": "autotest {{$timestamp}}"
+  "type": "donationgoal"
 }
 
 > {%
+  client.test("Successfully created DonationGoal widget", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(
+      response.body.id !== undefined && response.body.id !== null,
+      "widget has id",
+    );
+  });
   client.global.set("widgetId", response.body.id);
 %}
+
 
 ### CREATE_DEFAULT_GOAL_IN_WIDGET
 
 < {%
   function uuidv4() {
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, c => {
-      const r = Math.random() * 16 | 0;
-      const v = c === 'x' ? r : (r & 0x3 | 0x8);
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === "x" ? r : (r & 0x3) | 0x8;
       return v.toString(16);
     });
   }
-
+  
   client.global.set("goalId", uuidv4());
 %}
 
@@ -44,17 +54,17 @@ Content-Type: application/json
         "name": "goal",
         "value": [
           {
-            "id": "{{goalId}}",
-            "briefDescription": "testgoal",
-            "fullDescription": "",
-            "default": true,
-            "requiredAmount": {
-              "major": 300,
-              "currency": "RUB"
-            },
             "accumulatedAmount": {
-              "major": 0,
-              "currency": "RUB"
+              "currency": "RUB",
+              "major": 0
+            },
+            "briefDescription": "testgoal",
+            "default": true,
+            "fullDescription": "",
+            "id": "{{goalId}}",
+            "requiredAmount": {
+              "currency": "RUB",
+              "major": 300
             }
           }
         ]
@@ -63,21 +73,27 @@ Content-Type: application/json
   }
 }
 
+
 ### CHECK_DONATIONGOAL_ON_PAYMENTPAGE
 
 GET {{CONFIG_API_ENDPOINT}}/config/paymentpage?ownerId=testuser HTTP/1.1
 Accept: application/json
 
 > {%
-  client.test("Check DonationGoal on PaymentPage", function() {
-    client.assert(response.body.value.goals.length === 1);
-    client.assert(response.body.value.goals[0].isDefault === true);
-    client.assert(response.body.value.goals[0].requiredAmount !== null);
-    client.assert(response.body.value.goals[0].requiredAmount.major === 300);
-    client.assert(response.body.value.goals[0].requiredAmount.currency === "RUB");
-    client.assert(response.body.value.goals[0].briefDescription === "testgoal");
+  client.test("Check DonationGoal on PaymentPage", function () {
+    client.assert(
+      response.body.value.goals !== undefined 
+        && response.body.value.goals !== null 
+        && response.body.value.goals.length === 1
+    );
+    client.assert(response.body.value.goals[0]?.isDefault === true);
+    client.assert(response.body.value.goals[0]?.requiredAmount !== null);
+    client.assert(response.body.value.goals[0]?.requiredAmount.major === 300);
+    client.assert(response.body.value.goals[0]?.requiredAmount.currency === "RUB");
+    client.assert(response.body.value.goals[0]?.briefDescription === "testgoal");
   });
 %}
+
 
 ### MAKE_PAYMENT_WITH_DONATIONGOAL
 
@@ -87,30 +103,31 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "id": "{{$uuid}}",
-  "recipientId": "testuser",
-  "nickname": "stCarolas",
-  "gatewayCredId": "1",
-  "message": "autotest donationgoal {{$timestamp}}",
+  "actions": [],
   "amount": {
+    "currency": "RUB",
     "major": 100,
-    "minor": 0,
-    "currency": "RUB"
+    "minor": 0
   },
   "attachments": [],
-  "goal": "{{goalId}}",
   "auction": null,
-  "actions": []
+  "gatewayCredId": "1",
+  "goal": "{{goalId}}",
+  "id": "{{$uuid}}",
+  "message": "autotest donationgoal {{$timestamp}}",
+  "nickname": "stCarolas",
+  "recipientId": "testuser"
 }
 
 > {%
   async function wait(ms) {
-    return new Promise(resolve => {
+    return new Promise((resolve) => {
       setTimeout(resolve, ms);
     });
   }
   wait(2000);
 %}
+
 
 ### CHECK_UPDATED_DONATIONGOAL
 
@@ -118,22 +135,27 @@ GET {{CONFIG_API_ENDPOINT}}/config/paymentpage?ownerId=testuser HTTP/1.1
 Accept: application/json
 
 > {%
-  client.test("Check DonationGoal on PaymentPage", function() {
+  client.test("Check DonationGoal on PaymentPage", function () {
     let goals = response.body.value.goals;
     client.assert(goals !== null);
     if (goals !== null) {
       client.assert(goals.length === 1);
       client.assert(goals[0].accumulatedAmount !== null);
-      client.assert(goals[0].accumulatedAmount.major === 100, "Accumulated amount should be 100");
+      client.assert(
+        goals[0].accumulatedAmount.major === 100,
+        "Accumulated amount should be 100",
+      );
       client.assert(goals[0].accumulatedAmount.currency === "RUB");
     }
   });
 %}
 
+
 ### DELETE_DONATIONGOAL_WIDGET
 
 DELETE {{WIDGET_API_ENDPOINT}}/widgets/{{widgetId}} HTTP/1.1
 Authorization: Bearer {{token}}
+
 
 ### CHECK_DONATIONGOAL_ON_PAYMENTPAGE_IS_DELETED
 
@@ -141,7 +163,10 @@ GET {{CONFIG_API_ENDPOINT}}/config/paymentpage?ownerId=testuser HTTP/1.1
 Accept: application/json
 
 > {%
-  client.test("Check DonationGoal on PaymentPage", function() {
-    client.assert(response.body.value.goals === null, "Goal deleted from PaymentPage");
+  client.test("Check DonationGoal on PaymentPage", function () {
+    client.assert(
+      response.body.value.goals === null,
+      "Goal deleted from PaymentPage",
+    );
   });
 %}

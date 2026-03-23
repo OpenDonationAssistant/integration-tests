@@ -1,0 +1,116 @@
+###
+run ./login.http
+
+### CREATE_DONATON_WIDGET
+POST {{WIDGET_API_ENDPOINT}}/widgets/commands/add
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "type": "donaton",
+  "sortOrder": 0,
+  "name": "donaton autotest {{$timestamp}}"
+}
+
+> {%
+  client.test("Successfully created Reel widget", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(
+      response.body.id !== undefined && response.body.id !== null,
+      "widget has id",
+    );
+  });
+  client.global.set("widgetId", response.body.id);
+%}
+
+### SET_PRICE_AND_END_DATE
+PATCH {{WIDGET_API_ENDPOINT}}/widgets/{{widgetId}} HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "config": {
+    "properties": [
+      {"name":"price","value":{"unit":"HOUR","price":10}},
+      {"name":"timer-end","value":{"timestamp":"2026-03-22T20:59:00.999Z"}}
+    ]
+  }
+}
+
+> {%
+  client.test("Price and end date has been set", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}
+
+
+### MAKE_PAYMENT
+PUT {{PAYMENT_API_ENDPOINT}}/payments/commands/create HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "{{$uuid}}",
+  "recipientId": "testuser",
+  "nickname": "stCarolas",
+  "gatewayCredId": "1",
+  "message": "autotest for donaton {{$timestamp}}",
+  "amount": {
+    "major": 100,
+    "minor": 0,
+    "currency": "RUB"
+  },
+  "attachments": [],
+  "goal": null,
+  "auction": null,
+  "actions": []
+}
+
+> {%
+  async function wait(ms) {
+    return new Promise(resolve => {
+      setTimeout(resolve, ms);
+    });
+  }
+  wait(2000);
+%}
+
+### CHECK_DONATON_END_DATE
+GET {{WIDGET_API_ENDPOINT}}/widgets/{{widgetId}}
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Donaton has end date", function () {
+    client.assert(response.status === 200, "200 OK");
+    var config = response.body.config;
+    client.assert(
+      config !== undefined && config !== null,
+      "widget has config"
+    );
+    var properties = config.properties;
+    client.assert(
+      properties !== undefined && properties !== null,
+      "config has properties",
+    );
+    var timerEnd = properties.filter(prop => prop.name === "timer-end");
+    client.assert(timerEnd.length === 1, "widget has 'timer-end' property");
+    var timestamp = timerEnd[0].value?.timestamp;
+    client.assert(
+      timestamp === "2026-03-23T06:59:00.999Z",
+      "donaton has end date",
+    )
+  });
+%}
+
+### DELETE_DONATON_WIDGET
+DELETE {{WIDGET_API_ENDPOINT}}/widgets/{{widgetId}} HTTP/1.1
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Successfully deleted Donaton widget", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}

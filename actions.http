@@ -34,7 +34,7 @@ Content-Type: application/json
 }
 
 > {%
-client.global.set("actionId", response.body[0].action.id);
+  client.global.set("actionId", response.body[0].action.id);
 %}
 
 ### GET_ACTION_BY_RECIPIENT
