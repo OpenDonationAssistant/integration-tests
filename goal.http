@@ -1,8 +1,8 @@
 ### 
 run ./login.http
 
-###
-POST http://localhost:5000/subscriptions
+### SUBSCRIBE_TO_WIDGET_MESSAGES
+POST http://{{STOMP_API_ENDPOINT}}/subscriptions
 Content-Type: application/json
 
 {
@@ -135,7 +135,7 @@ Content-Type: application/json
 %}
 
 ### CHECK_WIDGET_EVENT_UPDATE
-GET http://localhost:5000/subscriptions/testusergoal/messages
+GET http://{{STOMP_API_ENDPOINT}}/subscriptions/testusergoal/messages
 
 > {%
   client.test("Check widget event update", function () {
