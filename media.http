@@ -18,7 +18,7 @@ Content-Type: application/json
 {
   "type": "media",
   "sortOrder": 0,
-  "name": "autotest {{$timestamp}}"
+  "name": "media autotest {{$timestamp}}"
 }
 
 > {%
@@ -50,7 +50,7 @@ Content-Type: application/json
 }
 
 > {%
-client.global.set("mediaId", response.body.id)
+  client.global.set("mediaId", response.body.id)
 %}
 
 ### MAKE_PAYMENT

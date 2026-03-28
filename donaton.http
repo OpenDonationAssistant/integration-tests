@@ -121,6 +121,10 @@ GET {{STOMP_API_ENDPOINT}}/subscriptions/commands/messages
     client.assert(response.status === 200, "200 OK");
     client.assert(response.body !== null);
     client.assert(response.body.messages !== null && response.body.messages.length > 0);
+    const message = response.body.messages.at(-1);
+    client.assert(message.body !== null && message.body !== undefined);
+    client.assert(message.body.command === "reload");
+    client.assert(message.body.widgetId === client.global.get("widgetId"));
   });
 %}
 
