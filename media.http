@@ -1,8 +1,15 @@
 ###
 run ./login.http
 
-### CREATE_MEDIA_WIDGET
+### SUBSCRIBE_TO_WIDGET_MESSAGES
+POST {{STOMP_API_ENDPOINT}}/subscriptions
+Content-Type: application/json
 
+{
+  "topics": ["testusermedia"]
+}
+
+### CREATE_MEDIA_WIDGET
 POST {{WIDGET_API_ENDPOINT}}/widgets/commands/add HTTP/1.1
 Accept: application/json
 Authorization: Bearer {{token}}
@@ -19,7 +26,6 @@ client.global.set("widgetId", response.body.id);
 %}
 
 ### CHECK_MEDIA_SECTION_ON_PAYMENTPAGE
-
 GET {{CONFIG_API_ENDPOINT}}/config/paymentpage?ownerId=testuser HTTP/1.1
 Accept: application/json
 
@@ -33,7 +39,6 @@ Accept: application/json
 %}
 
 ### PREPARE_VIDEO
-
 PUT {{MEDIA_API_ENDPOINT}}/media/video HTTP/1.1
 Accept: application/json
 Authorization: Bearer {{token}}
@@ -49,7 +54,6 @@ client.global.set("mediaId", response.body.id)
 %}
 
 ### MAKE_PAYMENT
-
 PUT {{PAYMENT_API_ENDPOINT}}/payments/commands/create HTTP/1.1
 Accept: application/json
 Authorization: Bearer {{token}}
@@ -81,14 +85,7 @@ Content-Type: application/json
   wait(2000);
 %}
 
-> {%
-  const { execSync } = require('child_process');
-  const output = execSync('tail -n 1 /tmp/test', { encoding: 'utf8' });
-  console.log(output);
-%}
-
 ### CHECK_READY_MEDIA
-
 GET {{MEDIA_API_ENDPOINT}}/media/video HTTP/1.1
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -105,7 +102,6 @@ Content-Type: application/json
 %}
 
 ### CHECK_HISTORY_ITEM
-
 POST {{HISTORY_API_ENDPOINT}}/history/get?size=1 HTTP/1.1
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -126,11 +122,9 @@ Content-Type: application/json
 %}
 
 ### MARK_VIDEO_HANDLED
-
 PATCH {{MEDIA_API_ENDPOINT}}/media/video/{{mediaId}} HTTP/1.1
 
 ### CHECK_NO_READY_MEDIA
-
 GET {{MEDIA_API_ENDPOINT}}/media/video HTTP/1.1
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -140,5 +134,35 @@ Content-Type: application/json
 
   client.test("All Media is Handled", function() {
     client.assert(json.length == 0);
+  });
+%}
+
+### CHECK_WIDGET_NOTIFICATION
+GET {{STOMP_API_ENDPOINT}}/subscriptions/testusermedia/messages
+Content-Type: application/json
+
+> {%
+  client.test("Check sent action request", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body !== null);
+    if (response.body === null || response.body === undefined) {
+      return;
+    }
+    client.assert(response.body.messages !== null && response.body.messages.length > 0);
+    if (response.body.messages === null || response.body.messages === undefined) {
+      return;
+    }
+    const message = response.body.messages.at(-1);
+    if (message === null || message === undefined) {
+      return;
+    }
+    client.assert(message.body !== null && message.body !== undefined);
+    if (message.body === null || message.body === undefined) {
+      return;
+    }
+    client.assert(message.body.provider === "vk", "Widget received correct provider");
+    client.assert(message.body.title === "Linux by Rebrai: Linux from scratch — 04", "Widget recevied correct title");
+    client.assert(message.body.thumbnail.length > 0, "Widget received thumbnail");
+    client.assert(message.body.url === "https://vkvideo.ru/video-165282829_456239200", "Widget received correct url");
   });
 %}

@@ -1,0 +1,76 @@
+###
+run ./login.http
+
+### SUBSCRIBE_TO_WIDGET_MESSAGES
+POST {{STOMP_API_ENDPOINT}}/subscriptions
+Content-Type: application/json
+
+{
+  "topics": ["testuserdonaterstoplist"]
+}
+
+### CREATE_TOPLIST_WIDGET
+POST {{WIDGET_API_ENDPOINT}}/widgets/commands/add
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "type": "donaters-top-list",
+  "sortOrder": 0,
+  "name": "toplist autotest {{$timestamp}}"
+}
+
+> {%
+  client.test("Successfully created TopList widget", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(
+      response.body.id !== undefined && response.body.id !== null,
+      "widget has id",
+    );
+  });
+  client.global.set("widgetId", response.body.id);
+%}
+
+### MAKE_PAYMENT
+PUT {{PAYMENT_API_ENDPOINT}}/payments/commands/create HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "{{$uuid}}",
+  "recipientId": "testuser",
+  "nickname": "stCarolas",
+  "gatewayCredId": "1",
+  "message": "autotest for donaton {{$timestamp}}",
+  "amount": {
+    "major": 100,
+    "minor": 0,
+    "currency": "RUB"
+  },
+  "attachments": [],
+  "goal": null,
+  "auction": null,
+  "actions": []
+}
+
+> {%
+  async function wait(ms) {
+    return new Promise(resolve => {
+      setTimeout(resolve, ms);
+    });
+  }
+  wait(3000);
+%}
+
+### CHECK_WIDGET_EVENT_UPDATE
+GET {{STOMP_API_ENDPOINT}}/subscriptions/testuserdonaterstoplist/messages
+
+> {%
+  client.test("Check widget event update", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body !== null);
+    client.assert(response.body.messages !== null && response.body.messages.length > 0);
+  });
+%}

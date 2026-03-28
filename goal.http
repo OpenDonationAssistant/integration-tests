@@ -10,7 +10,6 @@ Content-Type: application/json
 }
 
 ### CREATE_DONATIONGOAL_WIDGET
-
 POST {{WIDGET_API_ENDPOINT}}/widgets/commands/add HTTP/1.1
 Accept: application/json
 Authorization: Bearer {{token}}
@@ -35,7 +34,6 @@ Content-Type: application/json
 
 
 ### CREATE_DEFAULT_GOAL_IN_WIDGET
-
 < {%
   function uuidv4() {
     return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
@@ -81,7 +79,6 @@ Content-Type: application/json
 
 
 ### CHECK_DONATIONGOAL_ON_PAYMENTPAGE
-
 GET {{CONFIG_API_ENDPOINT}}/config/paymentpage?ownerId=testuser HTTP/1.1
 Accept: application/json
 
@@ -102,7 +99,6 @@ Accept: application/json
 
 
 ### MAKE_PAYMENT_WITH_DONATIONGOAL
-
 PUT {{PAYMENT_API_ENDPOINT}}/payments/commands/create HTTP/1.1
 Accept: application/json
 Authorization: Bearer {{token}}
@@ -135,7 +131,7 @@ Content-Type: application/json
 %}
 
 ### CHECK_WIDGET_EVENT_UPDATE
-GET http://{{STOMP_API_ENDPOINT}}/subscriptions/testusergoal/messages
+GET {{STOMP_API_ENDPOINT}}/subscriptions/testusergoal/messages
 
 > {%
   client.test("Check widget event update", function () {
@@ -173,13 +169,11 @@ Accept: application/json
 
 
 ### DELETE_DONATIONGOAL_WIDGET
-
 DELETE {{WIDGET_API_ENDPOINT}}/widgets/{{widgetId}} HTTP/1.1
 Authorization: Bearer {{token}}
 
 
 ### CHECK_DONATIONGOAL_ON_PAYMENTPAGE_IS_DELETED
-
 GET {{CONFIG_API_ENDPOINT}}/config/paymentpage?ownerId=testuser HTTP/1.1
 Accept: application/json
 

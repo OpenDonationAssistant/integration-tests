@@ -1,0 +1,57 @@
+###
+run ./login.http
+
+### SUBSCRIBE_TO_WIDGET_MESSAGES
+POST {{STOMP_API_ENDPOINT}}/subscriptions
+Content-Type: application/json
+
+{
+  "topics": ["testuser.events"]
+}
+
+### CLEAR_MESSAGES
+DELETE {{STOMP_API_ENDPOINT}}/subscriptions/testuser.events/messages
+
+### MAKE_PAYMENT
+PUT {{PAYMENT_API_ENDPOINT}}/payments/commands/create HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "{{$uuid}}",
+  "recipientId": "testuser",
+  "nickname": "stCarolas",
+  "gatewayCredId": "1",
+  "message": "autotest {{$timestamp}}",
+  "amount": {
+    "major": 100,
+    "minor": 0,
+    "currency": "RUB"
+  },
+  "attachments": [],
+  "goal": null,
+  "auction": null,
+  "actions": []
+}
+
+> {%
+  async function wait(ms) {
+    return new Promise(resolve => {
+      setTimeout(resolve, ms);
+    });
+  }
+  wait(2000);
+%}
+
+### CHECK_WIDGET_EVENT_UPDATE
+GET {{STOMP_API_ENDPOINT}}/subscriptions/testuser.events/messages
+
+> {%
+  client.test("Check widget event update", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body !== null, "Response is not null");
+    client.assert(response.body.messages !== null && response.body.messages.length > 0, "Widget has received messages");
+    client.assert(response.body.messages.filter(it => it.body.type === "Alert").length > 0, "Received 'Alert' message");
+  });
+%}

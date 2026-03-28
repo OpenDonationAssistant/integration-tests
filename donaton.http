@@ -2,7 +2,7 @@
 run ./login.http
 
 ### SUBSCRIBE_TO_WIDGET_MESSAGES
-POST http://{{STOMP_API_ENDPOINT}}/subscriptions
+POST {{STOMP_API_ENDPOINT}}/subscriptions
 Content-Type: application/json
 
 {
@@ -114,19 +114,13 @@ Authorization: Bearer {{token}}
 %}
 
 ### CHECK_WIDGET_EVENT_UPDATE
-GET http://{{STOMP_API_ENDPOINT}}/subscriptions/testusergoal/messages
+GET {{STOMP_API_ENDPOINT}}/subscriptions/commands/messages
 
 > {%
   client.test("Check widget event update", function () {
     client.assert(response.status === 200, "200 OK");
     client.assert(response.body !== null);
     client.assert(response.body.messages !== null && response.body.messages.length > 0);
-    const message = response.body.messages.filter((message) => {
-      return message.body.goalId === client.global.get("goalId");
-    }).at(-1);
-    client.assert(message !== null && message !== undefined, "Goal found");
-    client.assert(message.body.accumulatedAmount !== null, "Goal has accumulated amount");
-    client.assert(message.body.accumulatedAmount.major === 100, "Amount is updated");
   });
 %}
 

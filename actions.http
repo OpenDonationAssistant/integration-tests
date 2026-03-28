@@ -1,8 +1,18 @@
 ###
 run ./login.http
 
-### CREATE_ACTION
+### SUBSCRIBE_TO_WIDGET_MESSAGES
+POST {{STOMP_API_ENDPOINT}}/subscriptions
+Content-Type: application/json
 
+{
+  "topics": ["testuser.actions"]
+}
+
+### CLEAR_MESSAGES
+DELETE {{STOMP_API_ENDPOINT}}/subscriptions/testuser.actions/messages
+
+### CREATE_ACTION
 POST {{ACTIONS_API_ENDPOINT}}/actions/commands/add-actions HTTP/1.1
 Accept: application/json
 Authorization: Bearer {{token}}
@@ -38,7 +48,6 @@ Content-Type: application/json
 %}
 
 ### GET_ACTION_BY_RECIPIENT
-
 GET {{ACTIONS_API_ENDPOINT}}/actions?recipientId=testuser HTTP/1.1
 Accept: application/json
 
@@ -55,8 +64,44 @@ Accept: application/json
   });
 %}
 
-### DELETE_ACTION
+### MAKE_PAYMENT
+PUT {{PAYMENT_API_ENDPOINT}}/payments/commands/create HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
 
+{
+  "id": "{{$uuid}}",
+  "recipientId": "testuser",
+  "nickname": "stCarolas",
+  "gatewayCredId": "1",
+  "message": "autotest {{$timestamp}}",
+  "amount": {
+    "major": 100,
+    "minor": 0,
+    "currency": "RUB"
+  },
+  "attachments": [],
+  "goal": null,
+  "auction": null,
+  "actions": [{
+      "id": "{{$uuid}}",
+      "actionId": "{{actionId}}",
+      "amount": 3,
+      "parameters": {}
+  }]
+}
+
+> {%
+  async function wait(ms) {
+    return new Promise(resolve => {
+      setTimeout(resolve, ms);
+    });
+  }
+  wait(2000);
+%}
+
+### DELETE_ACTION
 POST {{ACTIONS_API_ENDPOINT}}/actions/commands/deleteActions HTTP/1.1
 Accept: application/json
 Authorization: Bearer {{token}}
@@ -67,7 +112,6 @@ Content-Type: application/json
 }
 
 ### VERIFY_ACTION_DELETED
-
 GET {{ACTIONS_API_ENDPOINT}}/actions?recipientId=testuser HTTP/1.1
 Accept: application/json
 
@@ -75,5 +119,22 @@ Accept: application/json
   client.test("Action should be deleted", function() {
     const deletedAction = response.body.find(a => a.id === client.global.get("actionId"));
     client.assert(deletedAction === undefined, "Action should be deleted");
+  });
+%}
+
+### CHECK_ACTION_REQUEST
+GET {{STOMP_API_ENDPOINT}}/subscriptions/testuser.actions/messages
+Content-Type: application/json
+
+> {%
+  client.test("Check sent action request", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body !== null);
+    client.assert(response.body.messages !== null && response.body.messages.length > 0);
+    const message = response.body.messages.at(-1);
+    client.assert(message !== null && message !== undefined, "Request found");
+    client.assert(message.body !== null && message.body !== undefined && message.body.length > 0, "Only one action in request");
+    client.assert(message.body.at(0).actionId === client.global.get("actionId"), "Correct actionId");
+    client.assert(message.body.at(0).amount === 3, "Correct amount");
   });
 %}

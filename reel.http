@@ -1,6 +1,14 @@
 ###
 run ./login.http
 
+### SUBSCRIBE_TO_WIDGET_MESSAGES
+POST {{STOMP_API_ENDPOINT}}/subscriptions
+Content-Type: application/json
+
+{
+  "topics": ["testuser.events"]
+}
+
 ### CREATE_REEL_WIDGET
 POST {{WIDGET_API_ENDPOINT}}/widgets/commands/add
 Accept: application/json
@@ -77,6 +85,10 @@ Content-Type: application/json
       "Info about requested reels is Ready")
   });
 %}
+
+### GET_STOMP_MESSAGES
+GET {{STOMP_API_ENDPOINT}}/subscriptions/testuser.events/messages
+Content-Type: application/json
 
 ### DELETE_REEL_WIDGET
 DELETE {{WIDGET_API_ENDPOINT}}/widgets/{{widgetId}} HTTP/1.1
