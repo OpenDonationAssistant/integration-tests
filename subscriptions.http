@@ -1,0 +1,12 @@
+###
+run ./login.http
+
+### CREATE_SUBSCRIPTIONS
+POST {{SUBSCRIPTIONS_API_ENDPOINT}}/subscriptions/commands/add-queue-subscription
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "events": ["HistoryItemEvent"]
+}
