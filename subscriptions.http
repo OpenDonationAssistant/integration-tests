@@ -10,3 +10,19 @@ Content-Type: application/json
 {
   "events": ["HistoryItemEvent"]
 }
+
+### GET_SUBSCRIPTIONS
+GET {{SUBSCRIPTIONS_API_ENDPOINT}}/subscriptions
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### DELETE_SUBSCRIPTIONS
+POST {{SUBSCRIPTIONS_API_ENDPOINT}}/subscriptions/commands/delete
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "subscriptionId": "{{subscriptionId}}"
+}

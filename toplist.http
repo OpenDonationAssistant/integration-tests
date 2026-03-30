@@ -9,6 +9,9 @@ Content-Type: application/json
   "topics": ["testuserdonaterstoplist"]
 }
 
+### CLEAR_MESSAGES
+DELETE {{STOMP_API_ENDPOINT}}/subscriptions/testuser.events/messages
+
 ### CREATE_TOPLIST_WIDGET
 POST {{WIDGET_API_ENDPOINT}}/widgets/commands/add
 Accept: application/json
@@ -72,5 +75,15 @@ GET {{STOMP_API_ENDPOINT}}/subscriptions/testuserdonaterstoplist/messages
     client.assert(response.status === 200, "200 OK");
     client.assert(response.body !== null);
     client.assert(response.body.messages !== null && response.body.messages.length > 0);
+  });
+%}
+
+### DELETE_TOPLIST_WIDGET
+DELETE {{WIDGET_API_ENDPOINT}}/widgets/{{widgetId}} HTTP/1.1
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Widget successfully deleted", function () {
+    client.assert(response.status === 200, "200 OK");
   });
 %}
