@@ -1,0 +1,9 @@
+### add news
+POST /news/commands/add-news
+Content-Type: application/json
+
+{
+  "title": "New feature",
+  "description": "We shipped something cool",
+  "demoUrl": "https://example.com/demo"
+}

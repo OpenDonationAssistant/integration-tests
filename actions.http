@@ -64,6 +64,15 @@ Accept: application/json
   });
 %}
 
+### CHECK_ACTIONS_ON_PAYMENTPAGE
+GET {{CONFIG_API_ENDPOINT}}/config/paymentpage?ownerId=testuser HTTP/1.1
+Accept: application/json
+
+> {%
+  client.test("Check DonationGoal on PaymentPage", function () {
+  });
+%}
+
 ### MAKE_PAYMENT
 PUT {{PAYMENT_API_ENDPOINT}}/payments/commands/create HTTP/1.1
 Accept: application/json
@@ -101,6 +110,42 @@ Content-Type: application/json
   wait(2000);
 %}
 
+### CHECK_ACTION_REQUEST
+GET {{STOMP_API_ENDPOINT}}/subscriptions/testuser.actions/messages
+Content-Type: application/json
+
+> {%
+  client.test("Check sent action request", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body !== null);
+    client.assert(response.body.messages !== null && response.body.messages.length > 0);
+    const message = response.body.messages.at(-1);
+    client.assert(message !== null && message !== undefined, "Request found");
+    client.assert(message.body !== null && message.body !== undefined && message.body.length > 0, "Only one action in request");
+    client.assert(message.body.at(0).actionId === client.global.get("actionId"), "Correct actionId");
+    client.assert(message.body.at(0).amount === 3, "Correct amount");
+  });
+%}
+
+### CHECK_HISTORY_ITEM
+POST {{HISTORY_API_ENDPOINT}}/history/get?size=1 HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "systems": ["ODA","DonationAlerts","DonatePay","Donate.Stream","DonateX"]
+}
+
+> {%
+  let json = response.body.content;
+
+  client.test("Payed Media is Ready", function() {
+    client.assert(json.length == 1);
+    client.assert(json[0].actions.length == 1);
+    client.assert(json[0].actions[0].name !== null && json[0].actions[0].name !== undefined);
+  });
+%}
+
 ### DELETE_ACTION
 POST {{ACTIONS_API_ENDPOINT}}/actions/commands/deleteActions HTTP/1.1
 Accept: application/json
@@ -119,22 +164,5 @@ Accept: application/json
   client.test("Action should be deleted", function() {
     const deletedAction = response.body.find(a => a.id === client.global.get("actionId"));
     client.assert(deletedAction === undefined, "Action should be deleted");
-  });
-%}
-
-### CHECK_ACTION_REQUEST
-GET {{STOMP_API_ENDPOINT}}/subscriptions/testuser.actions/messages
-Content-Type: application/json
-
-> {%
-  client.test("Check sent action request", function () {
-    client.assert(response.status === 200, "200 OK");
-    client.assert(response.body !== null);
-    client.assert(response.body.messages !== null && response.body.messages.length > 0);
-    const message = response.body.messages.at(-1);
-    client.assert(message !== null && message !== undefined, "Request found");
-    client.assert(message.body !== null && message.body !== undefined && message.body.length > 0, "Only one action in request");
-    client.assert(message.body.at(0).actionId === client.global.get("actionId"), "Correct actionId");
-    client.assert(message.body.at(0).amount === 3, "Correct amount");
   });
 %}

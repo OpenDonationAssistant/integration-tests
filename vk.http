@@ -1,0 +1,34 @@
+### SENDING STREAM STARTED EVENT
+POST {{VKLIVE_API_ENDPOINT}}/vklive/events HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+
+event={
+  "data": {
+    "stream": {
+      "title": "День 2 | Шаримся на дне с @wellbredtroll | Subnautica 2 ",
+      "category": {
+        "id": "d50327fe-d18d-4ea1-9362-bdb0ca1ffc30",
+        "type": "game",
+        "title": "Subnautica 2"
+      },
+      "started_at": 1786103628,
+      "ended_at": null,
+      "video_id": "16146970068772",
+      "id": "f6f9fff7-ea2c-472d-a84e-48c1fc3ce192",
+      "preview_url": "https://images.live.vkvideo.ru/image/b886fb62-5299-4483-a6eb-a095e80d3eea?change_time=1781502910"
+    },
+    "owner": { "id": 29564758 },
+    "channel": { "url": "mrwhiskanson", "id": 8649069 }
+  },
+  "type": "channel_stream_start",
+  "legacy_user_id": 8649069,
+  "id": "7177714",
+  "time": 1786103628,
+  "user_id": 29564758
+}
+
+### SENDING CHANNEL FOLLOW EVENT
+POST {{VKLIVE_API_ENDPOINT}}/vklive/events HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+
+event={"user_id":29586153,"time":1786114210,"id":"7180917","type":"channel_follow_create","legacy_user_id":12291753,"data":{"owner":{"id":29590573},"follow":{"started_at":1786114210,"follower":{"nick_color":11,"avatar_url":"https://images.live.vkvideo.ru/user/20713503/avatar?change_time=1745745429","nick":"Дмитрий Лаптиёв","id":20713503}},"channel":{"url":"vakovsky","id":12291753}}}

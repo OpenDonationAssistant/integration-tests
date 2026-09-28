@@ -22,7 +22,7 @@ Content-Type: application/json
 }
 
 > {%
-client.global.set("widgetId", response.body.id);
+  client.global.set("widgetId", response.body.id);
 %}
 
 ### CHECK_MEDIA_SECTION_ON_PAYMENTPAGE
@@ -163,6 +163,16 @@ Content-Type: application/json
     client.assert(message.body.provider === "vk", "Widget received correct provider");
     client.assert(message.body.title === "Linux by Rebrai: Linux from scratch — 04", "Widget recevied correct title");
     client.assert(message.body.thumbnail.length > 0, "Widget received thumbnail");
-    client.assert(message.body.url === "https://vkvideo.ru/video-165282829_456239200", "Widget received correct url");
+    client.assert(message.body.url === "https://vk.ru/video_ext.php?oid=-165282829&id=456239200&hash=12174e6476592e14&__ref=vk.web2", "Widget received correct url");
+  });
+%}
+
+### DELETE_MEDIA_WIDGET
+DELETE {{WIDGET_API_ENDPOINT}}/widgets/{{widgetId}} HTTP/1.1
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Successfully deleted Media widget", function () {
+    client.assert(response.status === 200, "200 OK");
   });
 %}

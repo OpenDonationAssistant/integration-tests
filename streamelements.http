@@ -1,0 +1,19 @@
+###
+run login.http
+
+### GET_SE_SESSION
+GET {{STREAMELEMENTS_API_ENDPOINT}}/streamelements/session
+Authorization: Bearer {{token}}
+Accept: application/json
+Content-Type: application/json
+
+### IMPORT_OVERLAY
+POST {{STREAMELEMENTS_API_ENDPOINT}}/streamelements/import-overlay
+Authorization: Bearer {{token}}
+Accept: application/json
+Content-Type: application/json
+
+{
+"url":"{{streamelements_overlay_url}}",
+"tokenId":"streamerbottoken"
+}

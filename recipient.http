@@ -1,0 +1,91 @@
+###
+run ./login.http
+
+### ADMIN_LOGIN
+POST {{TOKEN_API_ENDPOINT}} HTTP/1.1
+Content-Type: application/x-www-form-urlencoded
+
+grant_type=password&
+client_id={{client_id}}&
+client_secret={{client_secret}}&
+username={{admin}}&
+password={{admin_password}}&
+scope=offline_access openid audience profile email stomp
+
+> {%
+  client.global.set("admin-token", response.body.access_token); 
+%}
+
+### 
+GET {{RECIPIENT_API_ENDPOINT}}/recipients/settings
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+> {%
+  client.test("Settings should be present", function() {
+    client.assert(response.body !== null, "Response body should not be empty");
+    client.assert(response.body.recipientId === "testuser");
+  });
+%}
+
+### TOGGLE FEATURE
+POST {{RECIPIENT_API_ENDPOINT}}/recipients/commands/toggle-feature
+Accept: application/json
+Authorization: Bearer {{admin-token}}
+Content-Type: application/json
+
+{
+  "recipientId": "testuser",
+  "name": "GamesIntegration",
+  "status": "ENABLED"
+}
+
+### ADD SE JWT TOKEN
+POST {{RECIPIENT_API_ENDPOINT}}/recipients/tokens/set-token
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+    "id": "streamerbottoken",
+    "token": "{{streamelements_bot_token}}",
+    "type": "accessToken",
+    "system": "StreamElementsJWT",
+    "settings":{}
+}
+
+### CHECK FEATURE ENABLED
+GET {{RECIPIENT_API_ENDPOINT}}/recipients/settings
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+> {%
+  client.test("Settings should be present", function() {
+    client.assert(response.body !== null, "Response body should not be empty");
+    client.assert(response.body.recipientId === "testuser", "RecipientId should be testuser");
+    client.assert(response.body.features.length === 1, "Features length should be 1");
+    client.assert(response.body.features.at(0).name === "GamesIntegration", "Feature name should be GamesIntegration");
+    client.assert(response.body.features.at(0).status === "ENABLED", "Feature status should be ENABLED");
+  });
+%}
+
+### REFRESH TOKENS
+# POST {{RECIPIENT_API_ENDPOINT}}/recipients/tokens/refresh
+# Authorization: Bearer {{admin-token}}
+# Content-Type: application/json
+#
+# {
+#   "system":"Twitch"
+# }
+
+### 
+# POST {{RECIPIENT_API_ENDPOINT}}/recipients/commands/update-email
+# Accept: application/json
+# Authorization: Bearer {{token}}
+# Content-Type: application/json
+
+# {
+#  "email": "{{admin_email}}"
+# }

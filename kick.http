@@ -1,0 +1,8 @@
+###
+run ./login.http
+
+###
+POST https://api.oda.digital/kick/commands/get-channel-info
+Authorization: Bearer {{token}}
+
+{}

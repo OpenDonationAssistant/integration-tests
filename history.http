@@ -1,0 +1,385 @@
+###
+run ./login.http
+
+### SUBSCRIBE_TO_WIDGET_MESSAGES
+POST {{STOMP_API_ENDPOINT}}/subscriptions
+Content-Type: application/json
+
+{
+  "topics": ["testuser.actions", "testuseralerts", "testusergoal", "testuserdonaterstoplist", "commands", "testuser.events"]
+}
+
+### CLEAR_MESSAGES
+DELETE {{STOMP_API_ENDPOINT}}/subscriptions/testuser.events/messages
+
+### CLEAR_MESSAGES
+DELETE {{STOMP_API_ENDPOINT}}/subscriptions/testuser.actions/messages
+
+### CLEAR_MESSAGES
+DELETE {{STOMP_API_ENDPOINT}}/subscriptions/testusergoal/messages
+
+### CLEAR_MESSAGES
+DELETE {{STOMP_API_ENDPOINT}}/subscriptions/testuseralerts/messages
+
+### CLEAR_MESSAGES
+DELETE {{STOMP_API_ENDPOINT}}/subscriptions/testuserdonaterstoplist/messages
+
+### CLEAR_MESSAGES
+DELETE {{STOMP_API_ENDPOINT}}/subscriptions/commands/messages
+
+### CREATE_REEL_WIDGET
+POST {{WIDGET_API_ENDPOINT}}/widgets/commands/add
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "type": "reel",
+  "sortOrder": 0,
+  "name": "Рулетка"
+}
+
+> {%
+  client.test("Successfully created Reel widget", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(
+      response.body.id !== undefined && response.body.id !== null,
+      "widget has id",
+    );
+  });
+  client.global.set("reelWidgetId", response.body.id);
+%}
+
+### SET_PRIZES
+PATCH {{WIDGET_API_ENDPOINT}}/widgets/{{reelWidgetId}} HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "config": {
+    "properties": [
+      { "name": "requiredAmount", "value": 100 },
+      {
+        "name": "titleFont",
+        "value": {
+          "family": "Roboto",
+          "size": 24,
+          "color": {
+            "gradient": false,
+            "gradientType": 0,
+            "repeating": false,
+            "colors": [{ "color": "#684aff" }],
+            "angle": 0
+          },
+          "outline": { "enabled": false, "width": 0, "color": "#000000" },
+          "weight": false,
+          "italic": false,
+          "underline": false,
+          "shadows": [],
+          "animation": "none",
+          "animationType": "entire",
+          "animationSpeed": "slow"
+        }
+      },
+      {
+        "name": "widgetBorder",
+        "value": {
+          "isSame": null,
+          "bottom": { "width": 1, "type": "solid", "color": "#000000" },
+          "top": { "width": 1, "type": "solid", "color": "#000000" },
+          "left": { "width": 1, "type": "solid", "color": "#000000" },
+          "right": { "width": 1, "type": "solid", "color": "#000000" }
+        }
+      },
+      {
+        "name": "cardBorder",
+        "value": {
+          "isSame": null,
+          "bottom": { "width": 1, "type": "solid", "color": "#000000" },
+          "top": { "width": 1, "type": "solid", "color": "#000000" },
+          "left": { "width": 1, "type": "solid", "color": "#000000" },
+          "right": { "width": 1, "type": "solid", "color": "#000000" }
+        }
+      },
+      {
+        "name": "selectionColor",
+        "value": {
+          "gradient": false,
+          "gradientType": 0,
+          "repeating": false,
+          "colors": [{ "color": "#FFFFFF" }],
+          "angle": 0
+        }
+      },
+      { "name": "reelWinningEffect", "value": { "id": "blink" } },
+      { "name": "perView", "value": 5 },
+      { "name": "speed", "value": 250 },
+      { "name": "time", "value": 10 },
+      { "name": "optionList", "value": ["Ничего", "Выигрыш", "123"] },
+      { "name": "backgroundImage", "value": null }
+    ]
+  }
+}
+
+### CREATE_DONATON_WIDGET
+POST {{WIDGET_API_ENDPOINT}}/widgets/commands/add
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "type": "donaton",
+  "sortOrder": 0,
+  "name": "donaton autotest {{$timestamp}}"
+}
+
+> {%
+  client.test("Successfully created Donaton widget", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(
+      response.body.id !== undefined && response.body.id !== null,
+      "widget has id",
+    );
+  });
+  client.global.set("donatonWidgetId", response.body.id);
+%}
+
+### SET_PRICE_AND_END_DATE
+PATCH {{WIDGET_API_ENDPOINT}}/widgets/{{donatonWidgetId}} HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "config": {
+    "properties": [
+      {"name":"price","value":{"unit":"HOUR","price":10}},
+      {"name":"timer-end","value":{"timestamp":"2026-03-22T20:59:00.999Z"}}
+    ]
+  }
+}
+
+> {%
+  client.test("Price and end date has been set", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}
+
+### CREATE_TOPLIST_WIDGET
+POST {{WIDGET_API_ENDPOINT}}/widgets/commands/add
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "type": "donaters-top-list",
+  "sortOrder": 0,
+  "name": "toplist autotest {{$timestamp}}"
+}
+
+> {%
+  client.test("Successfully created TopList widget", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(
+      response.body.id !== undefined && response.body.id !== null,
+      "widget has id",
+    );
+  });
+  client.global.set("toplistWidgetId", response.body.id);
+%}
+
+### CREATE_DONATIONGOAL_WIDGET
+POST {{WIDGET_API_ENDPOINT}}/widgets/commands/add HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "autotest {{$timestamp}}",
+  "sortOrder": 0,
+  "type": "donationgoal"
+}
+
+> {%
+  client.test("Successfully created DonationGoal widget", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(
+      response.body.id !== undefined && response.body.id !== null,
+      "widget has id",
+    );
+  });
+  client.global.set("goalWidgetId", response.body.id);
+%}
+
+### CREATE_DEFAULT_GOAL_IN_WIDGET
+< {%
+  function uuidv4() {
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === "x" ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  }
+  
+  client.global.set("goalId", uuidv4());
+%}
+
+PATCH {{WIDGET_API_ENDPOINT}}/widgets/{{goalWidgetId}} HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "config": {
+    "properties": [
+      {
+        "name": "goal",
+        "value": [
+          {
+            "id": "{{goalId}}",
+            "default": true,
+            "briefDescription": "testgoal",
+            "fullDescription": "",
+            "requiredAmount": {
+              "currency": "RUB",
+              "major": 300
+            },
+            "accumulatedAmount": {
+              "currency": "RUB",
+              "major": 0
+            }
+          }
+        ]
+      }
+    ]
+  }
+}
+
+### CREATE_HISTORY_ITEM
+POST {{HISTORY_API_ENDPOINT}}/history/commands/add-item
+Accept: application/json
+Authorization: Bearer {{ token }}
+Content-Type: application/json
+
+{
+  "paymentId": "{{$uuid}}",
+  "nickname": "stCarolas",
+  "amount": {
+    "major": 100,
+    "minor": 0,
+    "currency": "RUB"
+  },
+  "system": "DonateX",
+  "event":"payment",
+
+}
+
+### CHECK_HISTORY_ITEM
+GET {{HISTORY_API_ENDPOINT}}/history/?size=1 HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+> {%
+  let json = response.body.content;
+
+  client.test("Item created correctly", function() {
+  });
+%}
+
+### CHECK_DONATON_END_DATE
+GET {{WIDGET_API_ENDPOINT}}/widgets/{{donatonWidgetId}}
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Donaton has end date", function () {
+    client.assert(response.status === 200, "200 OK");
+    var config = response.body.config;
+    client.assert(
+      config !== undefined && config !== null,
+      "widget has config"
+    );
+    var properties = config.properties;
+    client.assert(
+      properties !== undefined && properties !== null,
+      "config has properties",
+    );
+    var timerEnd = properties.filter(prop => prop.name === "timer-end");
+    client.assert(timerEnd.length === 1, "widget has 'timer-end' property");
+    var timestamp = timerEnd[0].value?.timestamp;
+    client.assert(
+      timestamp === "2026-03-23T06:59:00.999Z",
+      "donaton has end date",
+    )
+  });
+%}
+
+
+
+### CHECK_UPDATED_DONATIONGOAL
+GET {{CONFIG_API_ENDPOINT}}/config/paymentpage?ownerId=testuser HTTP/1.1
+Accept: application/json
+
+> {%
+  client.test("Check DonationGoal on PaymentPage", function () {
+    let goals = response.body.value.goals;
+    client.assert(goals !== null);
+    if (goals !== null) {
+      client.assert(goals.length === 1);
+      client.assert(goals[0].requiredAmount !== null);
+      client.assert(
+        goals[0].requiredAmount.major === 300,
+        "Required amount should be 300",
+      );
+      client.assert(goals[0].accumulatedAmount !== null);
+      client.assert(
+        goals[0].accumulatedAmount.major === 100,
+        "Accumulated amount should be 100",
+      );
+      client.assert(goals[0].accumulatedAmount.currency === "RUB");
+    }
+  });
+%}
+
+### CHECK_OLD_ALERT_UPDATE
+GET {{STOMP_API_ENDPOINT}}/subscriptions/testuseralerts/messages
+
+> {%
+  client.test("Check widget event update", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body !== null, "Response is not null");
+    client.assert(response.body.messages !== null && response.body.messages.length > 0, "Widget has received messages");
+  });
+%}
+
+### CHECK_GOAL_EVENT_UPDATE
+GET {{STOMP_API_ENDPOINT}}/subscriptions/testusergoal/messages
+
+> {%
+  client.test("Check widget event update", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body !== null);
+    client.assert(response.body.messages !== null && response.body.messages.length > 0);
+    const message = response.body.messages.filter((message) => {
+      return message.body.goalId === client.global.get("goalId");
+    }).at(-1);
+    client.assert(message !== null && message !== undefined, "Goal found");
+    client.assert(message.body.accumulatedAmount !== null, "Goal has accumulated amount");
+    client.assert(message.body.accumulatedAmount.major === 100, "Amount is updated");
+  });
+%}
+
+### CHECK_TOPLIST_EVENT_UPDATE
+GET {{STOMP_API_ENDPOINT}}/subscriptions/testuserdonaterstoplist/messages
+
+> {%
+  client.test("Check widget event update", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body !== null);
+    client.assert(response.body.messages !== null && response.body.messages.length > 0);
+  });
+%}
+
+### GET_STOMP_MESSAGES
+GET {{STOMP_API_ENDPOINT}}/subscriptions/testuser.events/messages
+Content-Type: application/json

@@ -10,7 +10,7 @@ Content-Type: application/json
 }
 
 ### CLEAR_MESSAGES
-DELETE {{STOMP_API_ENDPOINT}}/subscriptions/testuser.events/messages
+DELETE {{STOMP_API_ENDPOINT}}/subscriptions/testuserdonaterstoplist/messages
 
 ### CREATE_TOPLIST_WIDGET
 POST {{WIDGET_API_ENDPOINT}}/widgets/commands/add

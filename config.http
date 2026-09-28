@@ -1,0 +1,90 @@
+###
+run ./login.http
+
+### CHANGE_LICENSE
+POST {{CONFIG_API_ENDPOINT}}/config/commands/change-agreement
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "gateway": "yoomoney"
+}
+
+### CHECK_LICENSE_ON_PAYMENTPAGE
+GET {{CONFIG_API_ENDPOINT}}/config/paymentpage?ownerId=testuser HTTP/1.1
+Accept: application/json
+
+> {%
+  client.test("Check License on PaymentPage", function () {
+  client.assert(
+    response.body.value.gateway === "yoomoney")
+  });
+%}
+
+### CHANGE_LICENSE
+POST {{CONFIG_API_ENDPOINT}}/config/commands/change-agreement
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "gateway": "robokassa"
+}
+
+### CHECK_LICENSE_ON_PAYMENTPAGE
+GET {{CONFIG_API_ENDPOINT}}/config/paymentpage?ownerId=testuser HTTP/1.1
+Accept: application/json
+
+> {%
+  client.test("Check License on PaymentPage", function () {
+  client.assert(
+    response.body.value.gateway === "robokassa")
+  });
+%}
+
+### CHANGE_SOCIALS
+POST {{CONFIG_API_ENDPOINT}}/config/commands/change-socials
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "socials":{"twitch":"https://twitch.tv"}
+}
+
+### CHECK_SOCIALS_ON_PAYMENTPAGE
+GET {{CONFIG_API_ENDPOINT}}/config/paymentpage?ownerId=testuser HTTP/1.1
+Accept: application/json
+
+> {%
+  client.test("Check Socials on PaymentPage", function () {
+    client.assert(response.body.value.url !== null && response.body.value.url !== undefined && response.body.value.url.length > 0);
+    client.assert(
+      response.body.value.url.at(0).twitch === "https://twitch.tv"
+    )
+  });
+%}
+
+### CHANGE_SOCIALS
+POST {{CONFIG_API_ENDPOINT}}/config/commands/change-socials
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "socials":{"vk":"https://vk.com"}
+}
+
+### CHECK_SOCIALS_ON_PAYMENTPAGE
+GET {{CONFIG_API_ENDPOINT}}/config/paymentpage?ownerId=testuser HTTP/1.1
+Accept: application/json
+
+> {%
+  client.test("Check Socials on PaymentPage", function () {
+    client.assert(response.body.value.url !== null && response.body.value.url !== undefined && response.body.value.url.length > 0);
+    client.assert(
+      response.body.value.url.at(0).vk === "https://vk.com"
+    )
+  });
+%}

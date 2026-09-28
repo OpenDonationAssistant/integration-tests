@@ -1,0 +1,47 @@
+###
+run ./login.http
+
+### CREATE_HISTORY_ITEM
+POST {{HISTORY_API_ENDPOINT}}/history/commands/add-item
+Accept: application/json
+Authorization: Bearer {{ token }}
+Content-Type: application/json
+
+{
+  "paymentId": "{{$uuid}}",
+  "nickname": "stCarolas",
+  "recipientId": "testuser",
+  "amount": {
+    "major": 1000,
+    "minor": 0,
+    "currency": "RUB"
+  },
+  "message": "history autotest {{$timestamp}}",
+  "system": "ODA",
+  "event":"payment",
+  "attachments": [],
+  "goals": [],
+  "reelResults":[],
+  "actions": [],
+  "vote": null,
+  "triggerAlert": true,
+  "triggerReel": true,
+  "triggerDonaton": true,
+  "addToGoal": true,
+  "addToTop": true,
+  "authorizationTimestamp": "{{$timestamp}}",
+  "levelName": "testlevel"
+}
+
+### Order print
+POST {{HISTORY_API_ENDPOINT}}/history/commands/print-csv
+Accept: application/json
+Authorization: Bearer {{ token }}
+Content-Type: application/json
+
+{
+  "events":["payment"],
+  "system":"ODA",
+  "after": "2020-01-01T00:00:00.000Z",
+  "before": "2030-01-01T00:00:00.000Z"
+}

@@ -1,3 +1,4 @@
+### all ok, maybe missing deleting automation rules and variables
 ### 
 run ./login.http
 
@@ -7,6 +8,29 @@ Content-Type: application/json
 
 {
   "topics": ["commands", "testusergoal"]
+}
+
+### CLEAR_MESSAGES
+DELETE {{STOMP_API_ENDPOINT}}/subscriptions/commands/messages
+
+### CLEAR_MESSAGES
+DELETE {{STOMP_API_ENDPOINT}}/subscriptions/testusergoal/messages
+
+### SET_FAKE_GATEWAY
+POST {{GATEWAYS_API_ENDPOINT}}/payments/commands/setgateway HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "1",
+  "gatewayId": "1",
+  "token": "",
+  "gateway": "fake",
+  "secret": "",
+  "type": "fiat",
+  "settings":{},
+  "enabled": true
 }
 
 ### CREATE_DONATIONGOAL_WIDGET
@@ -89,7 +113,7 @@ Content-Type: application/json
   
   client.global.set("counterId", uuidv4());
 %}
-POST {{AUTOMATION_API_ENDPOINT}}/automation/commands/setstate
+POST {{AUTOMATION_API_ENDPOINT}}/automation/commands/set-state
 Accept: application/json
 Authorization: Bearer {{token}}
 Content-Type: application/json
@@ -99,6 +123,7 @@ Content-Type: application/json
     {
       "id": "{{$uuid}}",
       "name": "Без названия",
+      "enabled": true,
       "triggers": [
         {
           "id": "donationgoal-filled",
@@ -166,6 +191,24 @@ Accept: application/json
   });
 %}
 
+### SET_FAKE_GATEWAY
+POST {{GATEWAYS_API_ENDPOINT}}/payments/commands/setgateway HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "1",
+  "gatewayId": "1",
+  "token": "",
+  "gateway": "fake",
+  "secret": "",
+  "type": "fiat",
+  "settings":{},
+  "enabled": true
+}
+
+
 
 ### MAKE_PAYMENT_WITH_DONATIONGOAL
 PUT {{PAYMENT_API_ENDPOINT}}/payments/commands/create HTTP/1.1
@@ -229,7 +272,7 @@ Accept: application/json
       client.assert(goals[0].requiredAmount !== null);
       client.assert(
         goals[0].requiredAmount.major === 500,
-        "Required amount should be 100",
+        "Required amount should be 500",
       );
       client.assert(goals[0].accumulatedAmount !== null);
       client.assert(

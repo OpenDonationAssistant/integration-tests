@@ -1,6 +1,37 @@
 ###
 run ./login.http
 
+### SET_YOOKASSA_GATEWAY
+POST {{GATEWAYS_API_ENDPOINT}}/payments/commands/setgateway HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "2",
+  "gatewayId": "2",
+  "token": "",
+  "gateway": "yookassa",
+  "secret": "",
+  "type": "fiat",
+  "settings":{},
+  "enabled": true
+}
+
+### CHECK_YOOKASSA_GATEWAY
+GET {{GATEWAYS_API_ENDPOINT}}/payments/gateways?recipientId=testuser HTTP/1.1
+Accept: application/json
+
+> {%
+  client.test("Correct gateways settings", function() {
+     const gateways = response.body
+      .filter(gateway => gateway.enabled)
+      .filter(gateway => gateway.gateway === "yookassa");
+    client.assert(gateways.length === 1, "Default gateway is fake");
+  });
+%}
+
+
 ### SET_FAKE_GATEWAY
 POST {{GATEWAYS_API_ENDPOINT}}/payments/commands/setgateway HTTP/1.1
 Accept: application/json
@@ -14,6 +45,7 @@ Content-Type: application/json
   "gateway": "fake",
   "secret": "",
   "type": "fiat",
+  "settings":{},
   "enabled": true
 }
 
@@ -29,3 +61,13 @@ Accept: application/json
     client.assert(gateways.length === 1, "Default gateway is fake");
   });
 %}
+
+### CHANGE_LICENSE
+POST {{GATEWAYS_API_ENDPOINT}}/payments/commands/changelicense HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "gateway": "robokassa"
+}

@@ -1,5 +1,25 @@
 ###
-run ./login.http
+run login.http
+
+### GET_SERVICE_ACCOUNT_TOKEN
+# POST https://auth.oda.digital/realms/ODA/protocol/openid-connect/token
+# Content-Type: application/x-www-form-urlencoded
+#
+# grant_type=client_credentials&
+# client_id={{keycloak_admin_client_id}}&
+# client_secret={{keycloak_admin_client_secret}}
+#
+# > {%
+#   client.global.set("service-account-token", response.body.access_token); 
+# %}
+
+### CREATE_OIDC_APP
+# POST https://auth.oda.digital/admin/realms/ODA/clients
+# Accept: application/json
+# Authorization: Bearer {{service-account-token}}
+# Content-Type: application/json
+#
+# {"id":"7f31e8cd-41be-4407-bf6e-7022c57684d7","clientId":"7f31e8cd-41be-4407-bf6e-7022c57684d7","name":"second","description":"123 123 ","protocol":"openid-connect","publicClient":false,"standardFlowEnabled":true,"implicitFlowEnabled":false,"directAccessGrantsEnabled":true,"serviceAccountsEnabled":true,"redirectUris":[],"webOrigins":null,"secret":null}
 
 ### CREATE_SUBSCRIPTIONS
 POST {{SUBSCRIPTIONS_API_ENDPOINT}}/subscriptions/commands/add-queue-subscription
@@ -16,6 +36,10 @@ GET {{SUBSCRIPTIONS_API_ENDPOINT}}/subscriptions
 Accept: application/json
 Authorization: Bearer {{token}}
 Content-Type: application/json
+
+> {%
+  client.global.set("subscriptionId", response.body[0].id); 
+%}
 
 ### DELETE_SUBSCRIPTIONS
 POST {{SUBSCRIPTIONS_API_ENDPOINT}}/subscriptions/commands/delete

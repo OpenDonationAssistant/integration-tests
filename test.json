@@ -1,0 +1,11 @@
+{
+  "type": "copyFile",
+  "source": {
+    "bucketName": "",
+    "fileName": ""
+  },
+  "destination": {
+    "bucketName": "",
+    "fileName": ""
+  }
+}

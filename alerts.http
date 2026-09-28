@@ -6,13 +6,39 @@ POST {{STOMP_API_ENDPOINT}}/subscriptions
 Content-Type: application/json
 
 {
-  "topics": ["testuser.events"]
+  "topics": ["testuser.events", "testuseralerts"]
 }
 
 ### CLEAR_MESSAGES
 DELETE {{STOMP_API_ENDPOINT}}/subscriptions/testuser.events/messages
 
+### CLEAR_MESSAGES
+DELETE {{STOMP_API_ENDPOINT}}/subscriptions/testuseralerts/messages
+
+### SET_FAKE_GATEWAY
+POST {{GATEWAYS_API_ENDPOINT}}/payments/commands/setgateway HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "1",
+  "gatewayId": "1",
+  "token": "",
+  "gateway": "fake",
+  "secret": "",
+  "type": "fiat",
+  "settings":{},
+  "enabled": true
+}
+
 ### MAKE_PAYMENT
+
+< {%
+  client.global.set("timestamp", new Date().toISOString()); 
+%}
+
+
 PUT {{PAYMENT_API_ENDPOINT}}/payments/commands/create HTTP/1.1
 Accept: application/json
 Authorization: Bearer {{token}}
@@ -23,7 +49,7 @@ Content-Type: application/json
   "recipientId": "testuser",
   "nickname": "stCarolas",
   "gatewayCredId": "1",
-  "message": "autotest {{$timestamp}}",
+  "message": "autotest https://ya.ru",
   "amount": {
     "major": 100,
     "minor": 0,
@@ -53,5 +79,56 @@ GET {{STOMP_API_ENDPOINT}}/subscriptions/testuser.events/messages
     client.assert(response.body !== null, "Response is not null");
     client.assert(response.body.messages !== null && response.body.messages.length > 0, "Widget has received messages");
     client.assert(response.body.messages.filter(it => it.body.type === "Alert").length > 0, "Received 'Alert' message");
+    const expectedMessage = "autotest  (ссылка удалена) ";
+    const actualMessage = response.body.messages.filter(it => it.body.type === "Alert").at(-1).body.variables.filter(it => it.name === "message").at(0).value;
+    client.assert(actualMessage === expectedMessage, "Received 'Alert' message");
+  });
+%}
+
+### CLEAR_MESSAGES
+DELETE {{STOMP_API_ENDPOINT}}/subscriptions/testuser.events/messages
+
+### CHECK_WIDGET_EVENT_UPDATE
+GET {{STOMP_API_ENDPOINT}}/subscriptions/testuser.events/messages
+
+> {%
+  client.test("Check widget event update", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body !== null, "Response is not null");
+    client.assert(response.body.messages !== null && response.body.messages.length === 0, "Widget has no messages");
+  });
+%}
+
+### CHECK_HISTORY_ITEM
+GET {{HISTORY_API_ENDPOINT}}/history/?size=1&sort=timestamp%2Cdesc HTTP/1.1
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+> {%
+  client.global.set("historyItemId", response.body.content[0].id); 
+%}
+
+### REPEAT ALERT
+POST {{HISTORY_API_ENDPOINT}}/history/commands/repeat-alert
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "historyItemId":"{{ historyItemId }}"
+}
+
+### CHECK_REPEATED_ALERT
+GET {{STOMP_API_ENDPOINT}}/subscriptions/testuser.events/messages
+
+> {%
+  client.test("Check widget event update", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body !== null, "Response is not null");
+    client.assert(response.body.messages !== null && response.body.messages.length > 0, "Widget has received messages");
+    client.assert(response.body.messages.filter(it => it.body.type === "Alert").length > 0, "Received 'Alert' message");
+    const expectedMessage = "autotest  (ссылка удалена) ";
+    const actualMessage = response.body.messages.filter(it => it.body.type === "Alert").at(-1).body.variables.filter(it => it.name === "message").at(0).value;
+    client.assert(actualMessage === expectedMessage, "Correct message in alert");
   });
 %}

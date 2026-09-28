@@ -9,6 +9,9 @@ Content-Type: application/json
   "topics": ["testuser.events"]
 }
 
+### CLEAR_MESSAGES
+DELETE {{STOMP_API_ENDPOINT}}/subscriptions/testuser.events/messages
+
 ### CREATE_REEL_WIDGET
 POST {{WIDGET_API_ENDPOINT}}/widgets/commands/add
 Accept: application/json
@@ -31,6 +34,79 @@ Content-Type: application/json
   });
   client.global.set("widgetId", response.body.id);
 %}
+
+
+### SET_PRIZES
+PATCH {{WIDGET_API_ENDPOINT}}/widgets/{{widgetId}} HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "config": {
+    "properties": [
+      { "name": "requiredAmount", "value": 100 },
+      {
+        "name": "titleFont",
+        "value": {
+          "family": "Roboto",
+          "size": 24,
+          "color": {
+            "gradient": false,
+            "gradientType": 0,
+            "repeating": false,
+            "colors": [{ "color": "#684aff" }],
+            "angle": 0
+          },
+          "outline": { "enabled": false, "width": 0, "color": "#000000" },
+          "weight": false,
+          "italic": false,
+          "underline": false,
+          "shadows": [],
+          "animation": "none",
+          "animationType": "entire",
+          "animationSpeed": "slow"
+        }
+      },
+      {
+        "name": "widgetBorder",
+        "value": {
+          "isSame": null,
+          "bottom": { "width": 1, "type": "solid", "color": "#000000" },
+          "top": { "width": 1, "type": "solid", "color": "#000000" },
+          "left": { "width": 1, "type": "solid", "color": "#000000" },
+          "right": { "width": 1, "type": "solid", "color": "#000000" }
+        }
+      },
+      {
+        "name": "cardBorder",
+        "value": {
+          "isSame": null,
+          "bottom": { "width": 1, "type": "solid", "color": "#000000" },
+          "top": { "width": 1, "type": "solid", "color": "#000000" },
+          "left": { "width": 1, "type": "solid", "color": "#000000" },
+          "right": { "width": 1, "type": "solid", "color": "#000000" }
+        }
+      },
+      {
+        "name": "selectionColor",
+        "value": {
+          "gradient": false,
+          "gradientType": 0,
+          "repeating": false,
+          "colors": [{ "color": "#FFFFFF" }],
+          "angle": 0
+        }
+      },
+      { "name": "reelWinningEffect", "value": { "id": "blink" } },
+      { "name": "perView", "value": 5 },
+      { "name": "speed", "value": 250 },
+      { "name": "time", "value": 10 },
+      { "name": "optionList", "value": ["Ничего", "Выигрыш", "123"] },
+      { "name": "backgroundImage", "value": null }
+    ]
+  }
+}
 
 ### MAKE_PAYMENT
 PUT {{PAYMENT_API_ENDPOINT}}/payments/commands/create

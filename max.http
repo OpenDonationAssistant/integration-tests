@@ -1,0 +1,31 @@
+###
+run ./login.http
+
+### GET_LINK
+POST {{MAX_API_ENDPOINT}}/max/commands/generate-link
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### GET_AVAILABLE_CHATS
+POST {{MAX_API_ENDPOINT}}/max/commands/list-available-chats
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### GET_ACCOUNTS
+GET {{MAX_API_ENDPOINT}}/max/accounts
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+### TOGGLE_ACCOUNTS
+POST {{MAX_API_ENDPOINT}}/max/commands/toggle-account
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "019d428c-4a0f-7c8b-bc14-2abfb8af3ffa",
+  "enabled": false
+}

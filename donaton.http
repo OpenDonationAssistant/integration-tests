@@ -9,6 +9,26 @@ Content-Type: application/json
   "topics": ["commands"]
 }
 
+### CLEAR_MESSAGES
+DELETE {{STOMP_API_ENDPOINT}}/subscriptions/commands/messages
+
+### SET_FAKE_GATEWAY
+POST {{GATEWAYS_API_ENDPOINT}}/payments/commands/setgateway HTTP/1.1
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "1",
+  "gatewayId": "1",
+  "token": "",
+  "gateway": "fake",
+  "secret": "",
+  "type": "fiat",
+  "settings":{},
+  "enabled": true
+}
+
 ### CREATE_DONATON_WIDGET
 POST {{WIDGET_API_ENDPOINT}}/widgets/commands/add
 Accept: application/json
