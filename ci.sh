@@ -1,41 +1,19 @@
-# ──────────────────────────────────────────────────────────────────
-# Determine which .http files to run
-# ──────────────────────────────────────────────────────────────────
+#!/usr/bin/env bash
+# CI runner: identical suite to run-tests.sh, tuned for non-interactive use.
+# Runs without a TTY, suppresses the progress bar, keeps the default BASIC log
+# level for readable CI output, and exits non-zero if any collection fails.
+set -euo pipefail
+
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-http_files=()
-while IFS= read -r -d '' f; do
-  http_files+=("$f")
-done < <(find "$SCRIPT_DIR" -maxdepth 1 -name '*.http' -print0 | sort -z)
 
-if [[ ${#http_files[@]} -eq 0 ]]; then
-  echo "No .http files found in $SCRIPT_DIR" >&2
-  exit 1
-fi
+# shellcheck source=lib/setup.sh
+source "$SCRIPT_DIR/lib/setup.sh"
+# shellcheck source=lib/summary.sh
+source "$SCRIPT_DIR/lib/summary.sh"
+# shellcheck source=lib/runner.sh
+source "$SCRIPT_DIR/lib/runner.sh"
 
-echo "=== Found ${#http_files[@]} .http files to run ==="
-echo ""
+export ODA_LOG_LEVEL="${ODA_LOG_LEVEL:-BASIC}"
 
-# ──────────────────────────────────────────────────────────────────
-# Run each .http file via the JetBrains HTTP Client container
-# ──────────────────────────────────────────────────────────────────
-PODMAN_IMAGE="docker.io/jetbrains/intellij-http-client"
-
-for http_file in "${http_files[@]}"; do
-  filename="$(basename "$http_file")"
-  setup
-  echo "=== Running: $filename ==="
-
-  podman run --rm -it \
-    -v "$SCRIPT_DIR:/workdir:z" \
-    "$PODMAN_IMAGE" \
-    --env-file http-client.env.json \
-    --env dev \
-    -L VERBOSE \
-    -D \
-    "/workdir/$filename"
-
-  echo "=== Passed: $filename ==="
-  echo ""
-done
-
-echo "=== All tests passed ==="
+REPORT_ROOT="${ODA_REPORT_ROOT:-$(mktemp -d)}"
+run_suite "$REPORT_ROOT" "$SCRIPT_DIR"

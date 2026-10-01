@@ -1,25 +1,5 @@
 ###
-run login.http
-
-### GET_SERVICE_ACCOUNT_TOKEN
-# POST https://auth.oda.digital/realms/ODA/protocol/openid-connect/token
-# Content-Type: application/x-www-form-urlencoded
-#
-# grant_type=client_credentials&
-# client_id={{keycloak_admin_client_id}}&
-# client_secret={{keycloak_admin_client_secret}}
-#
-# > {%
-#   client.global.set("service-account-token", response.body.access_token); 
-# %}
-
-### CREATE_OIDC_APP
-# POST https://auth.oda.digital/admin/realms/ODA/clients
-# Accept: application/json
-# Authorization: Bearer {{service-account-token}}
-# Content-Type: application/json
-#
-# {"id":"7f31e8cd-41be-4407-bf6e-7022c57684d7","clientId":"7f31e8cd-41be-4407-bf6e-7022c57684d7","name":"second","description":"123 123 ","protocol":"openid-connect","publicClient":false,"standardFlowEnabled":true,"implicitFlowEnabled":false,"directAccessGrantsEnabled":true,"serviceAccountsEnabled":true,"redirectUris":[],"webOrigins":null,"secret":null}
+run ./login.http
 
 ### CREATE_SUBSCRIPTIONS
 POST {{SUBSCRIPTIONS_API_ENDPOINT}}/subscriptions/commands/add-queue-subscription
@@ -28,17 +8,47 @@ Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "events": ["HistoryItemEvent"]
+  "events": ["AutotestSubscriptionEvent"]
 }
+
+> {%
+  client.test("Successfully created subscription", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}
 
 ### GET_SUBSCRIPTIONS
 GET {{SUBSCRIPTIONS_API_ENDPOINT}}/subscriptions
 Accept: application/json
 Authorization: Bearer {{token}}
-Content-Type: application/json
 
 > {%
-  client.global.set("subscriptionId", response.body[0].id); 
+  client.test("Created subscription is listed", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(Array.isArray(response.body), "subscriptions is an array");
+    var mine = response.body.filter(
+      it => it.events.indexOf("AutotestSubscriptionEvent") >= 0,
+    );
+    client.assert(mine.length > 0, "created subscription present");
+    client.global.set("subscriptionId", mine.at(-1).id);
+  });
+%}
+
+### GET_SUBSCRIPTION_BY_ID
+GET {{SUBSCRIPTIONS_API_ENDPOINT}}/subscriptions/{{subscriptionId}}
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Subscription is retrievable by id", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body.id === client.global.get("subscriptionId"), "id matches");
+    client.assert(response.body.recipientId === "testuser", "recipient matches");
+    client.assert(
+      response.body.events.indexOf("AutotestSubscriptionEvent") >= 0,
+      "event present",
+    );
+  });
 %}
 
 ### DELETE_SUBSCRIPTIONS
@@ -50,3 +60,172 @@ Content-Type: application/json
 {
   "subscriptionId": "{{subscriptionId}}"
 }
+
+> {%
+  client.test("Successfully deleted subscription", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}
+
+### GET_DELETED_SUBSCRIPTION
+GET {{SUBSCRIPTIONS_API_ENDPOINT}}/subscriptions/{{subscriptionId}}
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Deleted subscription returns 404", function () {
+    client.assert(response.status === 404, "404 Not Found");
+  });
+%}
+
+### GET_SUBSCRIPTIONS_AFTER_DELETE
+GET {{SUBSCRIPTIONS_API_ENDPOINT}}/subscriptions
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Deleted subscription is no longer listed", function () {
+    client.assert(response.status === 200, "200 OK");
+    var ids = response.body.map(it => it.id);
+    client.assert(
+      ids.indexOf(client.global.get("subscriptionId")) < 0,
+      "subscription removed",
+    );
+  });
+%}
+
+### REGISTER_OIDC_APP
+< {%
+  client.global.set("oidcAppName", "autotest oidc app " + new Date().getTime());
+%}
+
+POST {{SUBSCRIPTIONS_API_ENDPOINT}}/apps/commands/register-oidc-client
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clientName": "{{oidcAppName}}",
+  "redirectUris": ["https://example.com/callback"],
+  "description": "autotest application"
+}
+
+> {%
+  client.test("Successfully registered OIDC application", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(
+      response.body.id !== undefined && response.body.id !== null,
+      "application has internal id",
+    );
+  });
+  client.global.set("oidcId", response.body.id);
+%}
+
+### GET_OIDC_APPS
+# Note: GET /apps exposes the Keycloak internal UUID in the `clientId` field.
+GET {{SUBSCRIPTIONS_API_ENDPOINT}}/apps
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Registered OIDC application is listed", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(Array.isArray(response.body.content), "page has content");
+    var mine = response.body.content.filter(
+      it => it.clientId === client.global.get("oidcId"),
+    );
+    client.assert(mine.length > 0, "application listed");
+  });
+%}
+
+### CHANGE_OIDC_APP_SETTINGS
+POST {{SUBSCRIPTIONS_API_ENDPOINT}}/apps/commands/change-oidc-app-settings
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "{{oidcId}}",
+  "name": "autotest oidc app updated",
+  "description": "updated description",
+  "redirectUris": ["https://example.com/callback2"]
+}
+
+> {%
+  client.test("Successfully changed OIDC application settings", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}
+
+### CHECK_OIDC_APP_SETTINGS
+GET {{SUBSCRIPTIONS_API_ENDPOINT}}/apps
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("OIDC application settings were updated", function () {
+    client.assert(response.status === 200, "200 OK");
+    var app = response.body.content
+      .filter(it => it.clientId === client.global.get("oidcId"))
+      .at(-1);
+    client.assert(app !== undefined, "application present");
+    client.assert(app.name === "autotest oidc app updated", "name updated");
+    client.assert(
+      app.redirectUris.indexOf("https://example.com/callback2") >= 0,
+      "redirect uri updated",
+    );
+  });
+%}
+
+### REFRESH_OIDC_CLIENT_SECRET
+POST {{SUBSCRIPTIONS_API_ENDPOINT}}/apps/commands/refresh-client-secret
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "{{oidcId}}"
+}
+
+> {%
+  client.test("Successfully refreshed OIDC client secret", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body.id === client.global.get("oidcId"), "id matches");
+    client.assert(
+      response.body.clientSecret !== undefined && response.body.clientSecret !== null,
+      "secret returned",
+    );
+  });
+%}
+
+### DEREGISTER_OIDC_APP
+POST {{SUBSCRIPTIONS_API_ENDPOINT}}/apps/commands/deregister-oidc-client
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "clientId": "{{oidcId}}"
+}
+
+> {%
+  client.test("Successfully deregistered OIDC application", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}
+
+### CHECK_OIDC_APP_DEREGISTERED
+GET {{SUBSCRIPTIONS_API_ENDPOINT}}/apps
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Deregistered OIDC application is no longer listed", function () {
+    client.assert(response.status === 200, "200 OK");
+    var internalIds = response.body.content.map(it => it.clientId);
+    client.assert(
+      internalIds.indexOf(client.global.get("oidcId")) < 0,
+      "application removed",
+    );
+  });
+%}

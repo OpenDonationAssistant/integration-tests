@@ -1,9 +1,241 @@
-### add news
-POST /news/commands/add-news
+###
+run ./login.http
+
+### ADD_NEWS
+< {%
+  client.global.set("newsTitle", "New feature " + new Date().getTime());
+%}
+
+POST {{NEWS_API_ENDPOINT}}/news/commands/add-news
+Accept: application/json
+Authorization: Bearer {{token}}
 Content-Type: application/json
 
 {
-  "title": "New feature",
+  "title": "{{newsTitle}}",
   "description": "We shipped something cool",
-  "demoUrl": "https://example.com/demo"
+  "demoUrl": "https://example.com/demo",
+  "global": true
 }
+
+> {%
+  client.test("Successfully added news", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body.id !== undefined && response.body.id !== null, "news has id");
+    client.assert(response.body.title === client.global.get("newsTitle"), "news title matches");
+    client.assert(response.body.description === "We shipped something cool", "news description matches");
+    client.assert(response.body.demoUrl === "https://example.com/demo", "news demoUrl matches");
+  });
+  client.global.set("newsId", response.body.id);
+%}
+
+### GET_NEWS
+# Public endpoint; returns a page of news ordered by id.
+GET {{NEWS_API_ENDPOINT}}/news?page=0&size=10
+Accept: application/json
+
+> {%
+  client.test("Successfully listed news", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(Array.isArray(response.body.content), "page has content array");
+    var ids = response.body.content.map(it => it.id);
+    client.assert(ids.indexOf(client.global.get("newsId")) >= 0, "created news is listed");
+  });
+%}
+
+### GET_FEED_NEWS
+GET {{NEWS_API_ENDPOINT}}/feed/news
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Feed returns the latest unread news", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(Array.isArray(response.body), "feed is an array");
+    client.assert(response.body.length === 1, "feed contains latest news");
+    client.assert(response.body[0].id === client.global.get("newsId"), "feed contains created news");
+  });
+%}
+
+### CREATE_FEEDBACK
+POST {{NEWS_API_ENDPOINT}}/news/{{newsId}}/feedback/commands/create
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "rating": 5
+}
+
+> {%
+  client.test("Successfully created feedback", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}
+
+### MARK_AS_READ
+POST {{NEWS_API_ENDPOINT}}/feed/commands/mark-as-read
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "newsId": "{{newsId}}"
+}
+
+> {%
+  client.test("Successfully marked news as read", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}
+
+### GET_FEED_NEWS_AFTER_READ
+# After marking the latest news as read the feed must be empty.
+GET {{NEWS_API_ENDPOINT}}/feed/news
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Feed is empty after read", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(Array.isArray(response.body), "feed is an array");
+    client.assert(response.body.length === 0, "feed is empty");
+  });
+%}
+
+### ADD_ADVICE
+< {%
+  client.global.set("adviceText", "Advice " + new Date().getTime());
+%}
+
+POST {{NEWS_API_ENDPOINT}}/advice/commands/add-advice
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "text": "{{adviceText}}"
+}
+
+> {%
+  client.test("Successfully added advice", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body.id !== undefined && response.body.id !== null, "advice has id");
+    client.assert(response.body.text === client.global.get("adviceText"), "advice text matches");
+  });
+  client.global.set("adviceId", response.body.id);
+%}
+
+### GET_RANDOM_ADVICE
+GET {{NEWS_API_ENDPOINT}}/advice/commands/get-random-advice
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Successfully got random advice", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body.id !== undefined && response.body.id !== null, "advice has id");
+    client.assert(response.body.text !== undefined, "advice has text");
+  });
+%}
+
+### MARK_READ
+< {%
+  client.global.set("guideId", "guide-" + new Date().getTime());
+%}
+
+POST {{NEWS_API_ENDPOINT}}/guides/commands/mark-read
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "guideId": "{{guideId}}"
+}
+
+> {%
+  client.test("Successfully marked guide as read", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}
+
+### GET_READ_GUIDES
+GET {{NEWS_API_ENDPOINT}}/guides/commands/get-read
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Read guides contain marked guide", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(Array.isArray(response.body.ids), "guides has ids array");
+    client.assert(
+      response.body.ids.indexOf(client.global.get("guideId")) >= 0,
+      "marked guide is present",
+    );
+  });
+%}
+
+### ADD_WARNING
+POST {{NEWS_API_ENDPOINT}}/warnings/commands/create
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "message": "You have been warned",
+  "component": "chat",
+  "priority": "Notification"
+}
+
+> {%
+  client.test("Successfully added warning", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}
+
+### GET_WARNINGS
+# Note: warnings younger than 180s are intentionally hidden by the service,
+# so a freshly created warning is not expected to appear here yet.
+GET {{NEWS_API_ENDPOINT}}/warnings
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Successfully listed warnings", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(Array.isArray(response.body), "warnings is an array");
+  });
+%}
+
+### CLEAR_WARNINGS_BY_COMPONENT
+POST {{NEWS_API_ENDPOINT}}/warnings/commands/clear
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "components": ["chat"]
+}
+
+> {%
+  client.test("Successfully cleared chat warnings", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}
+
+### CLEAR_WARNINGS
+# Omitting/null components clears all warnings for the recipient.
+POST {{NEWS_API_ENDPOINT}}/warnings/commands/clear
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "components": null
+}
+
+> {%
+  client.test("Successfully cleared warnings", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}
