@@ -1,5 +1,4 @@
-### all ok, maybe missing deleting automation rules and variables
-### 
+###
 run ./login.http
 
 ### SUBSCRIBE_TO_WIDGET_MESSAGES
@@ -112,6 +111,9 @@ Content-Type: application/json
   }
   
   client.global.set("counterId", uuidv4());
+  client.global.set("ruleId", uuidv4());
+  client.global.set("commandRuleId", uuidv4());
+  client.global.set("commandCounterId", uuidv4());
 %}
 POST {{AUTOMATION_API_ENDPOINT}}/automation/commands/set-state
 Accept: application/json
@@ -121,7 +123,7 @@ Content-Type: application/json
 {
   "rules": [
     {
-      "id": "{{$uuid}}",
+      "id": "{{ruleId}}",
       "name": "Без названия",
       "enabled": true,
       "triggers": [
@@ -160,12 +162,41 @@ Content-Type: application/json
           }
         }
       ]
+    },
+    {
+      "id": "{{commandRuleId}}",
+      "name": "Command rule",
+      "enabled": true,
+      "triggers": [
+        {
+          "id": "command",
+          "value": {
+            "ruleId": "{{commandRuleId}}"
+          }
+        }
+      ],
+      "actions": [
+        {
+          "id": "increase-variable",
+          "value": {
+            "id": "{{commandCounterId}}",
+            "name": "CommandCounter",
+            "value": 5
+          }
+        }
+      ]
     }
   ],
   "variables": [
     {
       "id": "{{counterId}}",
       "name": "Счетчик",
+      "value": 0,
+      "type": "number"
+    },
+    {
+      "id": "{{commandCounterId}}",
+      "name": "CommandCounter",
       "value": 0,
       "type": "number"
     }
@@ -190,25 +221,6 @@ Accept: application/json
     client.assert(response.body.value.goals[0]?.briefDescription === "testgoal");
   });
 %}
-
-### SET_FAKE_GATEWAY
-POST {{GATEWAYS_API_ENDPOINT}}/payments/commands/setgateway HTTP/1.1
-Accept: application/json
-Authorization: Bearer {{token}}
-Content-Type: application/json
-
-{
-  "id": "1",
-  "gatewayId": "1",
-  "token": "",
-  "gateway": "fake",
-  "secret": "",
-  "type": "fiat",
-  "settings":{},
-  "enabled": true
-}
-
-
 
 ### MAKE_PAYMENT_WITH_DONATIONGOAL
 PUT {{PAYMENT_API_ENDPOINT}}/payments/commands/create HTTP/1.1
@@ -298,5 +310,431 @@ Accept: application/json
       response.body.value.goals === null,
       "Goal deleted from PaymentPage",
     );
+  });
+%}
+
+### GET_AUTOMATION_STATE
+GET {{AUTOMATION_API_ENDPOINT}}/automation/
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Automation state contains created rules and variables", function () {
+    client.assert(response.status === 200, "200 OK");
+    var ruleIds = response.body.rules.map(it => it.id);
+    var variableIds = response.body.variables.map(it => it.id);
+    client.assert(ruleIds.indexOf(client.global.get("ruleId")) >= 0, "goal rule present");
+    client.assert(ruleIds.indexOf(client.global.get("commandRuleId")) >= 0, "command rule present");
+    client.assert(variableIds.indexOf(client.global.get("counterId")) >= 0, "counter variable present");
+    client.assert(variableIds.indexOf(client.global.get("commandCounterId")) >= 0, "command counter variable present");
+  });
+%}
+
+### GET_AUTOMATION_VARIABLES
+GET {{AUTOMATION_API_ENDPOINT}}/automation/variables?page=0&size=20
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("List automation variables", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(Array.isArray(response.body.content), "page has content");
+    var ids = response.body.content.map(it => it.id);
+    client.assert(ids.indexOf(client.global.get("counterId")) >= 0, "counter variable listed");
+    client.assert(ids.indexOf(client.global.get("commandCounterId")) >= 0, "command counter variable listed");
+  });
+%}
+
+### GET_AUTOMATION_RULES
+GET {{AUTOMATION_API_ENDPOINT}}/automation/rules?page=0&size=20
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("List automation rules", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(Array.isArray(response.body.content), "page has content");
+    var ids = response.body.content.map(it => it.id);
+    client.assert(ids.indexOf(client.global.get("ruleId")) >= 0, "goal rule listed");
+    client.assert(ids.indexOf(client.global.get("commandRuleId")) >= 0, "command rule listed");
+  });
+%}
+
+### SET_RULE_ENABLED_FALSE
+POST {{AUTOMATION_API_ENDPOINT}}/automation/commands/set-enabled
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "ruleId": "{{ruleId}}"
+}
+
+> {%
+  client.test("Toggle rule enabled", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}
+
+### CHECK_RULE_DISABLED
+GET {{AUTOMATION_API_ENDPOINT}}/automation/
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Goal rule is disabled after toggle", function () {
+    client.assert(response.status === 200, "200 OK");
+    var rule = response.body.rules.filter(it => it.id === client.global.get("ruleId")).at(-1);
+    client.assert(rule !== undefined, "goal rule present");
+    client.assert(rule.enabled === false, "rule disabled");
+  });
+%}
+
+### SET_RULE_ENABLED_TRUE
+POST {{AUTOMATION_API_ENDPOINT}}/automation/commands/set-enabled
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "ruleId": "{{ruleId}}"
+}
+
+> {%
+  client.test("Toggle rule enabled back", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}
+
+### TRIGGER_RULE
+POST {{AUTOMATION_API_ENDPOINT}}/automation/commands/trigger-rule
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "{{commandRuleId}}",
+  "nickname": "stCarolas",
+  "system": "DonateX",
+  "variables": {
+    "amount": "100"
+  }
+}
+
+> {%
+  client.test("Trigger command rule", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}
+
+### CHECK_COMMAND_VARIABLE_INCREMENTED
+GET {{AUTOMATION_API_ENDPOINT}}/automation/variables?page=0&size=20
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Command variable was incremented by the action", function () {
+    client.assert(response.status === 200, "200 OK");
+    var variable = response.body.content
+      .filter(it => it.id === client.global.get("commandCounterId"))
+      .at(-1);
+    client.assert(variable !== undefined, "command counter present");
+    client.assert(Number(variable.value) === 5, "value incremented to 5");
+  });
+%}
+
+### CREATE_PANEL
+< {%
+  client.global.set("cardId", "card-" + new Date().getTime());
+%}
+
+POST {{AUTOMATION_API_ENDPOINT}}/panels/commands/create-panel
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "name": "autotest panel",
+  "cards": [
+    {
+      "id": "{{cardId}}",
+      "ruleId": "{{ruleId}}",
+      "title": "autotest card"
+    }
+  ]
+}
+
+> {%
+  client.test("Create panel returns id", function () {
+    client.assert(response.status === 201, "201 Created");
+    client.assert(response.body.id !== undefined, "panel has id");
+  });
+  client.global.set("panelId", response.body.id);
+%}
+
+### LIST_PANELS
+GET {{AUTOMATION_API_ENDPOINT}}/panels?page=0&size=20
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Created panel is listed", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(Array.isArray(response.body.content), "page has content");
+    var ids = response.body.content.map(it => it.id);
+    client.assert(ids.indexOf(client.global.get("panelId")) >= 0, "panel listed");
+  });
+%}
+
+### GET_PANEL
+GET {{AUTOMATION_API_ENDPOINT}}/panels/{{panelId}}
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Get panel by id", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body.id === client.global.get("panelId"), "panel id matches");
+    client.assert(response.body.name === "autotest panel", "panel name matches");
+    client.assert(response.body.cards.length === 1, "panel has one card");
+  });
+%}
+
+### UPDATE_PANEL
+POST {{AUTOMATION_API_ENDPOINT}}/panels/commands/update-panel
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "{{panelId}}",
+  "name": "autotest panel updated",
+  "cards": [
+    {
+      "id": "{{cardId}}",
+      "ruleId": "{{ruleId}}",
+      "title": "autotest card updated"
+    }
+  ]
+}
+
+> {%
+  client.test("Update panel", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}
+
+### GET_PANEL_UPDATED
+GET {{AUTOMATION_API_ENDPOINT}}/panels/{{panelId}}
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Panel was updated", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body.name === "autotest panel updated", "panel name updated");
+    client.assert(response.body.cards[0].title === "autotest card updated", "card title updated");
+  });
+%}
+
+### DELETE_PANEL
+POST {{AUTOMATION_API_ENDPOINT}}/panels/commands/delete-panel
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "id": "{{panelId}}"
+}
+
+> {%
+  client.test("Delete panel", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}
+
+### GET_DELETED_PANEL
+# A missing panel is reported as 401 by the controller.
+GET {{AUTOMATION_API_ENDPOINT}}/panels/{{panelId}}
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Deleted panel is not accessible", function () {
+    client.assert(response.status === 401, "401 Unauthorized");
+  });
+%}
+
+### LIST_ALERTS
+GET {{AUTOMATION_API_ENDPOINT}}/alerts?page=0&size=20
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("List alerts", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(Array.isArray(response.body.content), "page has content");
+  });
+%}
+
+### LIST_ALERTS_WITH_FILTER
+GET {{AUTOMATION_API_ENDPOINT}}/alerts?page=0&size=20&after=1970-01-01T00:00:00Z
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("List alerts with after filter", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(Array.isArray(response.body.content), "page has content");
+  });
+%}
+
+### GET_WORD_BLACKLIST
+GET {{AUTOMATION_API_ENDPOINT}}/word-blacklist
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Get word blacklist", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(Array.isArray(response.body), "blacklist is an array");
+  });
+%}
+
+### UPDATE_WORD_BLACKLIST
+POST {{AUTOMATION_API_ENDPOINT}}/word-blacklist/commands/update
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "words": ["autotest-badword", "spam"]
+}
+
+> {%
+  client.test("Update word blacklist", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(Array.isArray(response.body.words), "response has words");
+    client.assert(response.body.words.indexOf("autotest-badword") >= 0, "word saved");
+  });
+%}
+
+### CHECK_WORD_BLACKLIST
+GET {{AUTOMATION_API_ENDPOINT}}/word-blacklist
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Blacklist contains updated word", function () {
+    client.assert(response.status === 200, "200 OK");
+    var words = response.body.flatMap(it => it.words);
+    client.assert(words.indexOf("autotest-badword") >= 0, "word persisted");
+  });
+%}
+
+### CLEAR_WORD_BLACKLIST
+POST {{AUTOMATION_API_ENDPOINT}}/word-blacklist/commands/update
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "words": []
+}
+
+> {%
+  client.test("Clear word blacklist", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body.words.length === 0, "blacklist cleared");
+  });
+%}
+
+### UPDATE_OBS_SETTINGS
+POST {{AUTOMATION_API_ENDPOINT}}/obs-settings/commands/update
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "websocketUrl": "ws://localhost:4455",
+  "password": "autotest-password"
+}
+
+> {%
+  client.test("Update OBS settings", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body.websocketUrl === "ws://localhost:4455", "url saved");
+  });
+%}
+
+### GET_OBS_SETTINGS
+GET {{AUTOMATION_API_ENDPOINT}}/obs-settings
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Get OBS settings", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body.websocketUrl === "ws://localhost:4455", "url matches");
+  });
+%}
+
+### UPDATE_MELD_SETTINGS
+POST {{AUTOMATION_API_ENDPOINT}}/meld-settings/commands/update
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "websocketUrl": "ws://localhost:4456"
+}
+
+> {%
+  client.test("Update Meld settings", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body.websocketUrl === "ws://localhost:4456", "url saved");
+  });
+%}
+
+### GET_MELD_SETTINGS
+GET {{AUTOMATION_API_ENDPOINT}}/meld-settings
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Get Meld settings", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body.websocketUrl === "ws://localhost:4456", "url matches");
+  });
+%}
+
+### CLEAR_AUTOMATION_STATE
+# set-state with empty lists is the delete mechanism for automation rules and variables.
+POST {{AUTOMATION_API_ENDPOINT}}/automation/commands/set-state
+Accept: application/json
+Authorization: Bearer {{token}}
+Content-Type: application/json
+
+{
+  "rules": [],
+  "variables": []
+}
+
+> {%
+  client.test("Clear automation rules and variables", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}
+
+### CHECK_AUTOMATION_STATE_CLEARED
+GET {{AUTOMATION_API_ENDPOINT}}/automation/
+Accept: application/json
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Automation rules and variables are deleted", function () {
+    client.assert(response.status === 200, "200 OK");
+    client.assert(response.body.rules.length === 0, "no rules left");
+    client.assert(response.body.variables.length === 0, "no variables left");
   });
 %}
