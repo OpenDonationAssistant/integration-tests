@@ -82,7 +82,7 @@ Content-Type: application/json
         "value": [
           {
             "id": "{{goalId}}",
-            "default": true,
+            "mode": "default",
             "briefDescription": "testgoal",
             "fullDescription": "",
             "requiredAmount": {

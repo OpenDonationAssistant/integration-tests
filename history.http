@@ -238,7 +238,7 @@ Content-Type: application/json
         "value": [
           {
             "id": "{{goalId}}",
-            "default": true,
+            "mode": "default",
             "briefDescription": "testgoal",
             "fullDescription": "",
             "requiredAmount": {
@@ -272,7 +272,11 @@ Content-Type: application/json
   },
   "system": "DonateX",
   "event":"payment",
-
+  "addToGoal": true,
+  "addToTop": true,
+  "triggerDonaton": true,
+  "triggerReel": true,
+  "triggerAlert": true
 }
 
 ### CHECK_HISTORY_ITEM
