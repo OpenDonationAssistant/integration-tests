@@ -265,6 +265,7 @@ Content-Type: application/json
 {
   "paymentId": "{{$uuid}}",
   "nickname": "stCarolas",
+  "message": "history autotest",
   "amount": {
     "major": 100,
     "minor": 0,
@@ -387,3 +388,43 @@ GET {{STOMP_API_ENDPOINT}}/subscriptions/testuserdonaterstoplist/messages
 ### GET_STOMP_MESSAGES
 GET {{STOMP_API_ENDPOINT}}/subscriptions/testuser.events/messages
 Content-Type: application/json
+
+### DELETE_REEL_WIDGET
+DELETE {{WIDGET_API_ENDPOINT}}/widgets/{{reelWidgetId}} HTTP/1.1
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Successfully deleted Reel widget", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}
+
+### DELETE_DONATON_WIDGET
+DELETE {{WIDGET_API_ENDPOINT}}/widgets/{{donatonWidgetId}} HTTP/1.1
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Successfully deleted Donaton widget", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}
+
+### DELETE_TOPLIST_WIDGET
+DELETE {{WIDGET_API_ENDPOINT}}/widgets/{{toplistWidgetId}} HTTP/1.1
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Successfully deleted TopList widget", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}
+
+### DELETE_DONATIONGOAL_WIDGET
+DELETE {{WIDGET_API_ENDPOINT}}/widgets/{{goalWidgetId}} HTTP/1.1
+Authorization: Bearer {{token}}
+
+> {%
+  client.test("Successfully deleted DonationGoal widget", function () {
+    client.assert(response.status === 200, "200 OK");
+  });
+%}

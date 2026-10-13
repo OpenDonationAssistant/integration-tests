@@ -251,7 +251,7 @@ Content-Type: application/json
       setTimeout(resolve, ms);
     });
   }
-  wait(2000);
+  wait(5000);
 %}
 
 ### CHECK_WIDGET_EVENT_UPDATE
